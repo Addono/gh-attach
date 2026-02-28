@@ -209,12 +209,55 @@ async function startHttpServer(
     "@modelcontextprotocol/sdk/server/streamableHttp.js"
   );
 
-  const server = createProtocolServer();
-  const transport = new StreamableHTTPServerTransport({
-    // Stateless mode: no session IDs.
-    sessionIdGenerator: undefined,
-  });
-  await server.connect(transport);
+  type StreamableHTTPServerTransportCtor =
+    typeof import("@modelcontextprotocol/sdk/server/streamableHttp.js").StreamableHTTPServerTransport;
+  type StreamableHTTPServerTransportInstance =
+    InstanceType<StreamableHTTPServerTransportCtor>;
+
+  const sessions = new Map<
+    string,
+    { server: Server; transport: StreamableHTTPServerTransportInstance }
+  >();
+
+  function getHeaderValue(
+    req: IncomingMessage,
+    name: string,
+  ): string | undefined {
+    const raw = req.headers[name.toLowerCase()];
+    if (typeof raw === "string") return raw;
+    if (Array.isArray(raw)) return raw[0];
+    return undefined;
+  }
+
+  function isInitializeRequestBody(body: unknown): boolean {
+    if (Array.isArray(body)) {
+      return body.some(isInitializeRequestBody);
+    }
+    if (!body || typeof body !== "object") return false;
+    const method = (body as { method?: unknown }).method;
+    return method === "initialize";
+  }
+
+  async function createSession(): Promise<{
+    server: Server;
+    transport: StreamableHTTPServerTransportInstance;
+  }> {
+    const protocolServer = createProtocolServer();
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+    }) as StreamableHTTPServerTransportInstance;
+
+    await protocolServer.connect(transport);
+
+    transport.onclose = () => {
+      const sessionId = transport.sessionId;
+      if (typeof sessionId === "string") {
+        sessions.delete(sessionId);
+      }
+    };
+
+    return { server: protocolServer, transport };
+  }
 
   const httpServer = createServer(async (req, res) => {
     const path = (req.url ?? "").split("?")[0] ?? "";
@@ -225,30 +268,81 @@ async function startHttpServer(
       return;
     }
 
-    if (path === "/" && (req.method === "GET" || req.method === "POST" || req.method === "DELETE")) {
+    if (
+      path === "/" &&
+      (req.method === "GET" || req.method === "POST" || req.method === "DELETE")
+    ) {
       try {
-        if (req.method === "POST") {
-          const bodyText = await readRequestBody(req);
-          if (!bodyText.trim()) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Missing request body" }));
+        const sessionIdHeader = getHeaderValue(req, "mcp-session-id");
+
+        if (req.method === "GET" || req.method === "DELETE") {
+          if (!sessionIdHeader) {
+            // The client may probe GET before initialization; returning 405 signals
+            // that the standalone SSE stream is not available yet.
+            res.writeHead(405, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Method not allowed" }));
             return;
           }
 
-          let parsedBody: unknown;
-          try {
-            parsedBody = JSON.parse(bodyText);
-          } catch {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Invalid JSON" }));
+          const session = sessions.get(sessionIdHeader);
+          if (!session) {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Session not found" }));
             return;
           }
 
-          await transport.handleRequest(req, res, parsedBody);
+          await session.transport.handleRequest(req, res);
+          if (req.method === "DELETE") {
+            await session.server.close();
+          }
           return;
         }
 
-        await transport.handleRequest(req, res);
+        const bodyText = await readRequestBody(req);
+        if (!bodyText.trim()) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Missing request body" }));
+          return;
+        }
+
+        let parsedBody: unknown;
+        try {
+          parsedBody = JSON.parse(bodyText);
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid JSON" }));
+          return;
+        }
+
+        if (isInitializeRequestBody(parsedBody)) {
+          const session = await createSession();
+          try {
+            await session.transport.handleRequest(req, res, parsedBody);
+          } finally {
+            const sessionId = session.transport.sessionId;
+            if (typeof sessionId === "string") {
+              sessions.set(sessionId, session);
+            } else {
+              await session.server.close();
+            }
+          }
+          return;
+        }
+
+        if (!sessionIdHeader) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Missing mcp-session-id header" }));
+          return;
+        }
+
+        const session = sessions.get(sessionIdHeader);
+        if (!session) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Session not found" }));
+          return;
+        }
+
+        await session.transport.handleRequest(req, res, parsedBody);
         return;
       } catch (err) {
         if (!res.headersSent) {
@@ -283,7 +377,8 @@ async function startHttpServer(
   return {
     port: listenPort,
     close: async () => {
-      await server.close();
+      await Promise.all([...sessions.values()].map(async (s) => await s.server.close()));
+      sessions.clear();
       await new Promise<void>((resolve, reject) => {
         httpServer.close((closeErr) => {
           if (closeErr) {
