@@ -1,10 +1,46 @@
 import { Octokit } from "@octokit/rest";
-import { createReadStream } from "fs";
+import { readFileSync } from "fs";
 import { basename } from "path";
 import { AuthenticationError, UploadError } from "../types.js";
 import type { UploadResult, UploadStrategy, UploadTarget } from "../types.js";
 
 const ASSETS_TAG = "_gh-attach-assets";
+
+function getHttpStatus(err: unknown): number | undefined {
+  if (typeof err !== "object" || err === null) return undefined;
+  const status = (err as { status?: unknown }).status;
+  return typeof status === "number" ? status : undefined;
+}
+
+function getResponseHeader(err: unknown, headerName: string): string | undefined {
+  if (typeof err !== "object" || err === null) return undefined;
+  const response = (err as { response?: unknown }).response;
+  if (typeof response !== "object" || response === null) return undefined;
+  const headers = (response as { headers?: unknown }).headers;
+  if (typeof headers !== "object" || headers === null) return undefined;
+
+  const key = headerName.toLowerCase();
+  const value = (headers as Record<string, unknown>)[key];
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return undefined;
+}
+
+function isRateLimitError(err: unknown): boolean {
+  const message =
+    err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+  if (message.includes("rate limit")) return true;
+
+  const remaining = getResponseHeader(err, "x-ratelimit-remaining");
+  return remaining === "0";
+}
+
+function getRateLimitReset(err: unknown): number | undefined {
+  const reset = getResponseHeader(err, "x-ratelimit-reset");
+  if (!reset) return undefined;
+  const n = Number(reset);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 /**
  * Release Asset upload strategy using GitHub's official REST API.
@@ -85,7 +121,6 @@ async function findOrCreateAssetsRelease(
   target: UploadTarget,
 ) {
   try {
-    // Try to get the assets release
     const { data: release } = await octokit.rest.repos.getReleaseByTag({
       owner: target.owner,
       repo: target.repo,
@@ -93,13 +128,9 @@ async function findOrCreateAssetsRelease(
     });
     return release;
   } catch (err: unknown) {
-    // If release doesn't exist, create it
-    if (
-      err instanceof Error &&
-      err.message.includes("404") &&
-      "status" in err &&
-      err.status === 404
-    ) {
+    const status = getHttpStatus(err);
+
+    if (status === 404) {
       try {
         const { data: newRelease } = await octokit.rest.repos.createRelease({
           owner: target.owner,
@@ -109,33 +140,101 @@ async function findOrCreateAssetsRelease(
           draft: true,
         });
         return newRelease;
-      } catch (createErr) {
-        throw new AuthenticationError(
-          `Cannot create release: insufficient permissions or repository access`,
-          "INSUFFICIENT_PERMISSIONS",
-          { target, originalError: String(createErr) },
+      } catch (createErr: unknown) {
+        const createStatus = getHttpStatus(createErr);
+        const createMessage =
+          createErr instanceof Error ? createErr.message : String(createErr);
+        const createMessageLower = createMessage.toLowerCase();
+
+        const isCreate401 =
+          createStatus === 401 ||
+          createMessageLower.includes("401") ||
+          createMessageLower.includes("bad credentials");
+
+        const isCreate403 =
+          createStatus === 403 ||
+          createMessageLower.includes("403") ||
+          createMessageLower.includes("forbidden");
+
+        const isCreate422 =
+          createStatus === 422 ||
+          createMessageLower.includes("422") ||
+          createMessageLower.includes("validation failed");
+
+        if (isCreate401) {
+          throw new AuthenticationError(
+            "GitHub token is invalid or revoked.",
+            "INVALID_TOKEN",
+            { target, status: createStatus, originalError: String(createErr) },
+          );
+        }
+
+        if (isCreate403) {
+          if (isRateLimitError(createErr)) {
+            throw new UploadError(
+              "GitHub API rate limit exceeded.",
+              "RATE_LIMIT_EXCEEDED",
+              {
+                target,
+                status: createStatus,
+                reset: getRateLimitReset(createErr),
+                originalError: String(createErr),
+              },
+            );
+          }
+
+          throw new AuthenticationError(
+            "Cannot create release: insufficient permissions or repository access.",
+            "INSUFFICIENT_PERMISSIONS",
+            { target, status: createStatus, originalError: String(createErr) },
+          );
+        }
+
+        if (isCreate422) {
+          throw new UploadError(
+            "Cannot create assets release: validation failed.",
+            "RELEASE_CREATE_FAILED",
+            { target, status: createStatus, originalError: String(createErr) },
+          );
+        }
+
+        throw new UploadError(
+          `Cannot create assets release: ${createErr instanceof Error ? createErr.message : String(createErr)}`,
+          "RELEASE_CREATE_FAILED",
+          { target, status: createStatus, originalError: String(createErr) },
         );
       }
     }
 
-    // Check for permission-related errors
-    if (
-      err instanceof Error &&
-      (err.message.includes("403") ||
-        err.message.includes("Forbidden") ||
-        err.message.includes("403 Forbidden"))
-    ) {
+    if (status === 401) {
+      throw new AuthenticationError(
+        "GitHub token is invalid or revoked.",
+        "INVALID_TOKEN",
+        { target, status, originalError: String(err) },
+      );
+    }
+
+    if (status === 403) {
+      if (isRateLimitError(err)) {
+        throw new UploadError("GitHub API rate limit exceeded.", "RATE_LIMIT_EXCEEDED", {
+          target,
+          status,
+          reset: getRateLimitReset(err),
+          originalError: String(err),
+        });
+      }
+
       throw new AuthenticationError(
         `Insufficient permissions to access releases in ${target.owner}/${target.repo}`,
         "INSUFFICIENT_PERMISSIONS",
-        { target, originalError: String(err) },
+        { target, status, originalError: String(err) },
       );
     }
 
     throw new UploadError(
       `Failed to find or create assets release: ${err instanceof Error ? err.message : String(err)}`,
       "RELEASE_LOOKUP_FAILED",
-      { target, originalError: String(err) },
+      { target, status, originalError: String(err) },
     );
   }
 }
@@ -152,7 +251,7 @@ async function uploadAsset(
   filePath: string,
   filename: string,
 ): Promise<string> {
-  const stream = createReadStream(filePath);
+  const data = readFileSync(filePath);
 
   try {
     // Check if file already exists and handle collision
@@ -185,15 +284,34 @@ async function uploadAsset(
       repo: target.repo,
       release_id: releaseId,
       name: finalFilename,
-      data: stream as unknown as string,
+      data: data as unknown as string,
     });
 
     return asset.browser_download_url;
-  } catch (err) {
+  } catch (err: unknown) {
+    const status = getHttpStatus(err);
+
+    if (status === 401) {
+      throw new AuthenticationError(
+        "GitHub token is invalid or revoked.",
+        "INVALID_TOKEN",
+        { target, status, originalError: String(err) },
+      );
+    }
+
+    if (status === 403 && isRateLimitError(err)) {
+      throw new UploadError("GitHub API rate limit exceeded.", "RATE_LIMIT_EXCEEDED", {
+        target,
+        status,
+        reset: getRateLimitReset(err),
+        originalError: String(err),
+      });
+    }
+
     throw new UploadError(
       `Failed to upload asset: ${err instanceof Error ? err.message : String(err)}`,
       "ASSET_UPLOAD_FAILED",
-      { filePath, target, originalError: String(err) },
+      { filePath, target, status, originalError: String(err) },
     );
   }
 }

@@ -7,6 +7,7 @@ export default defineWorkspace([
       include: ["test/unit/**/*.test.ts"],
       environment: "node",
       coverage: {
+        enabled: true,
         provider: "v8",
         reporter: ["text", "html", "json", "lcov"],
         include: ["src/**/*.ts"],

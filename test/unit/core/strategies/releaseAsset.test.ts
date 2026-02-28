@@ -34,9 +34,7 @@ vi.mock("@octokit/rest", () => {
 });
 
 vi.mock("fs", () => ({
-  createReadStream: vi.fn(() => ({
-    on: vi.fn(),
-  })),
+  readFileSync: vi.fn(() => Buffer.from([0x89, 0x50, 0x4e, 0x47])),
   promises: {
     stat: vi.fn(),
   },
