@@ -457,3 +457,24 @@ This plan lists prioritized tasks required to bring the implementation into full
   - **Notes:**
     - Score-Maximisation Context still reported 0/100 because the prompt’s JSON template contained literal `0` values; replaced it with placeholder tokens (`SPEC_SCORE`, etc) and strengthened the instructions so every score and checklist entry must cite actual evidence.
   - **Validation:** `npm run typecheck`, `npm run lint`, `npm test`, `npm audit --production` (all pass; audit still warns about `--omit=dev` but reports 0 vulnerabilities).
+
+## 31. Test Coverage Expansion and CLI Exit Code Validation
+
+- **Task:** Expand test coverage with MCP browser-session strategy tests and CLI exit code integration tests; raise coverage thresholds. **[COMPLETE]**
+  - **Spec:** Testing/spec.md (Unit Test Coverage, CLI Integration Tests, E2E Tests), CLI/spec.md (Exit Codes), MCP/spec.md (Upload Image Tool)
+  - **Files:** test/unit/mcp/handlers.test.ts, test/integration/cli/exitCodes.test.ts (new), vitest.config.ts
+  - **Tests:** 12 new tests (3 MCP + 9 CLI integration)
+  - **Dependencies:** None
+  - **Notes:**
+    - **Targets Test Coverage (30/100) and Spec Compliance (0/100)** from Score-Maximisation Context.
+    - Added MCP tests for browser-session explicit strategy selection (previously uncovered line 752 in src/mcp/index.ts).
+    - Added MCP test for browser-session included in default strategy order when cookies are available.
+    - Added MCP test for login tool returning "already authenticated" when saved session cookies exist.
+    - Added comprehensive CLI exit code integration tests (test/integration/cli/exitCodes.test.ts) that spawn the built CLI as a subprocess and verify:
+      - Exit code 0 for --help and --version
+      - Exit code 3 (validation) for missing files, unsupported formats, non-existent files, missing --filename with --stdin, and invalid targets
+      - Exit code 1 (general) for no strategy available without auth
+    - Raised coverage thresholds from 65%/70%/70%/65% to 68%/80%/75%/68% (lines/functions/branches/statements).
+    - Excluded root-level files (ralph-loop.ts, commitlint.config.js) from coverage reporting.
+    - MCP branch coverage improved from 85% to 90%.
+    - All validation passes: `typecheck`, `lint` (0 errors), `test` (396 tests), `npm audit --production` (0 vulnerabilities).

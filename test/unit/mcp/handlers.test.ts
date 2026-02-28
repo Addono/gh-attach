@@ -453,6 +453,67 @@ describe("MCP server handlers", () => {
     expect(passedStrategies.map((s) => s.name)).toEqual(["repo-branch"]);
   });
 
+  it("uses browser-session strategy when explicitly selected with cookies", async () => {
+    process.env.GH_ATTACH_COOKIES = "user_session=abc123; logged_in=yes";
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({
+      params: {
+        name: "upload_image",
+        arguments: {
+          filePath: "/tmp/example.png",
+          target: "octo/repo#42",
+          strategy: "browser-session",
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const passedStrategies = (hoisted.mockUpload.mock.calls[0]?.[2] ??
+      []) as UploadStrategy[];
+    expect(passedStrategies.map((s) => s.name)).toEqual(["browser-session"]);
+  });
+
+  it("includes browser-session in default strategy order when cookies available", async () => {
+    process.env.GH_ATTACH_COOKIES = "user_session=abc123";
+    process.env.GITHUB_TOKEN = "ghs_test";
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({
+      params: {
+        name: "upload_image",
+        arguments: {
+          filePath: "/tmp/example.png",
+          target: "octo/repo#42",
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const passedStrategies = (hoisted.mockUpload.mock.calls[0]?.[2] ??
+      []) as UploadStrategy[];
+    expect(passedStrategies.map((s) => s.name)).toEqual([
+      "browser-session",
+      "cookie-extraction",
+      "release-asset",
+      "repo-branch",
+    ]);
+  });
+
+  it("login tool returns already-authenticated when saved session cookies exist", async () => {
+    saveSession({
+      cookies: "user_session=abc123; logged_in=yes",
+      expires: Date.now() + 86400000,
+    });
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({ params: { name: "login", arguments: {} } });
+
+    expect(response.isError).toBeUndefined();
+    expect(response.content[0]?.text).toContain("Already authenticated");
+    expect(response.content[0]?.text).toContain("browser session");
+  });
+
   it("login tool returns static guidance when client has no elicitation", async () => {
     // Default mock: getClientCapabilities returns {} (no elicitation)
     hoisted.mockServerGetClientCapabilities.mockReturnValue({});

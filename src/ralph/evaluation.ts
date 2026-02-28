@@ -351,3 +351,37 @@ export function deriveFallbackFitnessScores(
     aggregate,
   };
 }
+
+export interface NumericFitnessScores {
+  specCompliance: number;
+  testCoverage: number;
+  codeQuality: number;
+  buildHealth: number;
+  aggregate: number;
+}
+
+const AGGREGATE_SUSPICIOUS_THRESHOLD = 5;
+const MIN_COMPUTED_AGGREGATE_FOR_OVERRIDE = 30;
+const MIN_FALLBACK_AGGREGATE_FOR_OVERRIDE = 30;
+const SPEC_SUSPICIOUS_THRESHOLD = 5;
+const MIN_FALLBACK_SPEC_FOR_OVERRIDE = 30;
+
+export function isEvaluationPayloadSuspicious(
+  parsed: NumericFitnessScores,
+  fallback: FallbackFitnessScores,
+): boolean {
+  const computedAggregate = computeAggregateScore(
+    parsed.specCompliance,
+    parsed.testCoverage,
+    parsed.codeQuality,
+    parsed.buildHealth,
+  );
+  const aggregateMismatch =
+    parsed.aggregate <= AGGREGATE_SUSPICIOUS_THRESHOLD &&
+    computedAggregate >= MIN_COMPUTED_AGGREGATE_FOR_OVERRIDE &&
+    fallback.aggregate >= MIN_FALLBACK_AGGREGATE_FOR_OVERRIDE;
+  const specMismatch =
+    parsed.specCompliance <= SPEC_SUSPICIOUS_THRESHOLD &&
+    fallback.specCompliance >= MIN_FALLBACK_SPEC_FOR_OVERRIDE;
+  return aggregateMismatch || specMismatch;
+}

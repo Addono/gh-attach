@@ -5,11 +5,16 @@ import {
   computeAuditAdjustment,
   deriveFallbackFitnessScores,
   extractFitnessJsonPayload,
+  isEvaluationPayloadSuspicious,
   isSessionIdleTimeoutError,
   parseAuditSeverities,
   resolveEvaluationTimeoutMs,
 } from "../../../src/ralph/evaluation";
 import type { CommandCheckResult } from "../../../src/ralph/ci-gating";
+import type {
+  FallbackFitnessScores,
+  NumericFitnessScores,
+} from "../../../src/ralph/evaluation";
 
 describe("resolveEvaluationTimeoutMs", () => {
   it("clamps to minimum when timeout is too low", () => {
@@ -225,5 +230,54 @@ describe("deriveFallbackFitnessScores", () => {
       }),
     });
     expect(vulnerable.codeQuality).toBeLessThan(baseline.codeQuality);
+  });
+});
+
+describe("isEvaluationPayloadSuspicious", () => {
+  const fallback: FallbackFitnessScores = {
+    aggregate: 84,
+    specCompliance: 85,
+    testCoverage: 88,
+    codeQuality: 82,
+    buildHealth: 80,
+  };
+
+  it("flags placeholder aggregates despite healthy metrics", () => {
+    const parsed: NumericFitnessScores = {
+      specCompliance: 80,
+      testCoverage: 85,
+      codeQuality: 75,
+      buildHealth: 70,
+      aggregate: 0,
+    };
+    expect(
+      isEvaluationPayloadSuspicious(parsed, fallback),
+    ).toBe(true);
+  });
+
+  it("flags zero spec compliance when fallback indicates coverage", () => {
+    const parsed: NumericFitnessScores = {
+      specCompliance: 0,
+      testCoverage: 60,
+      codeQuality: 60,
+      buildHealth: 60,
+      aggregate: 50,
+    };
+    expect(
+      isEvaluationPayloadSuspicious(parsed, fallback),
+    ).toBe(true);
+  });
+
+  it("ignores reasonable scores", () => {
+    const parsed: NumericFitnessScores = {
+      specCompliance: 32,
+      testCoverage: 25,
+      codeQuality: 40,
+      buildHealth: 20,
+      aggregate: 30,
+    };
+    expect(
+      isEvaluationPayloadSuspicious(parsed, fallback),
+    ).toBe(false);
   });
 });
