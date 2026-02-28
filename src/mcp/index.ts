@@ -9,6 +9,7 @@ import { writeFileSync, unlinkSync, readFileSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { createServer } from "http";
+import type { IncomingMessage } from "http";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -105,15 +106,21 @@ const TOOLS = [
 ];
 
 /**
- * Creates and starts the MCP server with stdio transport.
+ * Creates a configured MCP SDK server instance with all tool handlers registered.
  */
-async function startStdioServer() {
-  const server = new Server({
-    name: "gh-attach",
-    version: VERSION,
-  });
+function createProtocolServer(): Server {
+  const server = new Server(
+    {
+      name: "gh-attach",
+      version: VERSION,
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    },
+  );
 
-  // Register request handlers
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS,
   }));
@@ -159,6 +166,15 @@ async function startStdioServer() {
     }
   });
 
+  return server;
+}
+
+/**
+ * Creates and starts the MCP server with stdio transport.
+ */
+async function startStdioServer() {
+  const server = createProtocolServer();
+
   // Connect via stdio
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -169,90 +185,116 @@ async function startStdioServer() {
 }
 
 /**
- * Creates and starts the MCP server with HTTP transport.
+ * Read the full request body as UTF-8 text.
  */
-async function startHttpServer(port: number) {
-  // Create HTTP server
+async function readRequestBody(req: IncomingMessage): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    let body = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk: string) => {
+      body += chunk;
+    });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
+/**
+ * Creates and starts the MCP server with HTTP transport (Streamable HTTP).
+ */
+async function startHttpServer(
+  port: number,
+): Promise<{ port: number; close: () => Promise<void> }> {
+  const { StreamableHTTPServerTransport } = await import(
+    "@modelcontextprotocol/sdk/server/streamableHttp.js"
+  );
+
+  const server = createProtocolServer();
+  const transport = new StreamableHTTPServerTransport({
+    // Stateless mode: no session IDs.
+    sessionIdGenerator: undefined,
+  });
+  await server.connect(transport);
+
   const httpServer = createServer(async (req, res) => {
-    // Health check endpoint
-    if (req.url === "/health" && req.method === "GET") {
+    const path = (req.url ?? "").split("?")[0] ?? "";
+
+    if (path === "/health" && req.method === "GET") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ status: "ok", version: VERSION }));
       return;
     }
 
-    // List tools endpoint
-    if (req.url === "/tools" && req.method === "GET") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ tools: TOOLS }));
-      return;
-    }
-
-    // Tool call endpoint
-    if (req.url === "/call" && req.method === "POST") {
-      let body = "";
-      req.on("data", (chunk) => {
-        body += chunk;
-      });
-      req.on("end", async () => {
-        try {
-          const request = JSON.parse(body);
-          const { name, arguments: args } = request;
-
-          let result;
-          switch (name) {
-            case "upload_image":
-              result = await handleUploadImage(
-                args as Parameters<typeof handleUploadImage>[0],
-              );
-              break;
-            case "login":
-              result = await handleLogin();
-              break;
-            case "check_auth":
-              result = await handleCheckAuth();
-              break;
-            case "list_strategies":
-              result = await handleListStrategies();
-              break;
-            default:
-              result = {
-                content: [
-                  {
-                    type: "text",
-                    text: `Unknown tool: ${name}`,
-                  },
-                ],
-                isError: true,
-              };
+    if (path === "/" && (req.method === "GET" || req.method === "POST" || req.method === "DELETE")) {
+      try {
+        if (req.method === "POST") {
+          const bodyText = await readRequestBody(req);
+          if (!bodyText.trim()) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Missing request body" }));
+            return;
           }
 
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(result));
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              content: [{ type: "text", text: `Error: ${message}` }],
-              isError: true,
-            }),
-          );
+          let parsedBody: unknown;
+          try {
+            parsedBody = JSON.parse(bodyText);
+          } catch {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Invalid JSON" }));
+            return;
+          }
+
+          await transport.handleRequest(req, res, parsedBody);
+          return;
         }
-      });
-      return;
+
+        await transport.handleRequest(req, res);
+        return;
+      } catch (err) {
+        if (!res.headersSent) {
+          const message = err instanceof Error ? err.message : String(err);
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: message }));
+        }
+        return;
+      }
     }
 
-    // 404
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Not found" }));
   });
 
-  httpServer.listen(port, () => {
-    console.error(
-      `[gh-attach MCP] Server started (http:${port}, version ${VERSION})`,
-    );
+  const listenPort = await new Promise<number>((resolve, reject) => {
+    httpServer.once("error", reject);
+    httpServer.listen(port, () => {
+      const addr = httpServer.address();
+      if (addr && typeof addr !== "string") {
+        resolve(addr.port);
+        return;
+      }
+      resolve(port);
+    });
   });
+
+  console.error(
+    `[gh-attach MCP] Server started (http:${listenPort}, version ${VERSION})`,
+  );
+
+  return {
+    port: listenPort,
+    close: async () => {
+      await server.close();
+      await new Promise<void>((resolve, reject) => {
+        httpServer.close((closeErr) => {
+          if (closeErr) {
+            reject(closeErr);
+            return;
+          }
+          resolve();
+        });
+      });
+    },
+  };
 }
 
 /**
@@ -294,6 +336,15 @@ export async function createMCPServer(
     process.exit(1);
   }
 }
+
+/**
+ * Testing hooks for MCP server internals.
+ *
+ * @internal
+ */
+export const mcpInternals = {
+  startHttpServer,
+};
 
 /**
  * Handles the upload_image tool call.

@@ -178,6 +178,7 @@ async function evaluateFitness(
   const buildResult = runCommand("npm run build 2>&1");
   const testResult = runCommand("npm test 2>&1");
   const lintResult = runCommand("npm run lint 2>&1");
+  const auditResult = runCommand("npm audit --production 2>&1");
 
   const evalPrompt = `You are an automated fitness evaluator for a TypeScript project.
 Your job is to score the implementation against the OpenSpec specifications below.
@@ -190,13 +191,17 @@ Your job is to score the implementation against the OpenSpec specifications belo
    - "score": integer 0-100
    - "reasoning": 1-3 sentences of EVIDENCE referencing the build/test/lint output or specific behaviour observed. When score < 80, state explicitly what is missing or broken.
 3. Do NOT bundle multiple requirements into one entry.
-4. After the checklist, compute dimension averages:
+4. When scoring, REWARD dependency freshness:
+   - If npm audit shows 0 vulnerabilities, add +5 bonus points to code quality
+   - If npm audit shows vulnerabilities, deduct points proportionally from code quality
+   - If dependencies are well-maintained and up-to-date, add this as a positive observation
+5. After the checklist, compute dimension averages:
    - specCompliance: average of all spec-related checklist items
    - testCoverage: average of all testing-related checklist items
-   - codeQuality: average of quality/lint/docs items
+   - codeQuality: average of quality/lint/docs/dependency items (rewarded for fresh deps, penalized for vulnerabilities)
    - buildHealth: average of build/CI items
    - aggregate: weighted average (spec 40%, tests 25%, quality 20%, build 15%)
-5. Write a one-sentence "notes" verdict.
+6. Write a one-sentence "notes" verdict.
 
 ## Specifications
 ${specs}
@@ -209,6 +214,9 @@ ${testResult.output}
 
 ## Lint Output (${lintResult.success ? "SUCCESS" : "FAILED"})
 ${lintResult.output}
+
+## Dependency Health (npm audit --production)
+${auditResult.output}
 
 Respond with ONLY a valid JSON object — no markdown, no code fences, no extra text:
 {

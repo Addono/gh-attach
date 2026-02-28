@@ -4,7 +4,7 @@
   "models": [
     "gpt-4.1",
     "gpt-5.1-codex-mini",
-    "gpt-5.1-codex",
+    "gpt-5.3-codex",
     "claude-haiku-4.5",
     "claude-sonnet-4.5",
     "claude-sonnet-4.6",

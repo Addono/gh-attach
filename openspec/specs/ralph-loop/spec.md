@@ -272,6 +272,65 @@ The evaluation model SHALL produce a structured scoring card that walks through 
 
 - AND the rows SHALL be ordered by score ascending so regressions appear first
 
+### Requirement: Dependency Health Scoring
+
+The evaluation model SHALL reward fresh, secure dependencies as part of code quality scoring.
+
+#### Scenario: Dependency audit execution
+
+- GIVEN a fitness evaluation is triggered
+- WHEN the evaluation model runs
+- THEN the system SHALL execute `npm audit --production`
+- AND include the full audit output in the evaluation prompt
+- AND provide a summary of:
+  - Number of vulnerabilities found (critical, high, medium, low)
+  - Known security issues in dependencies
+  - Outdated packages that have fixes available
+
+#### Scenario: Dependency health scoring bonus
+
+- GIVEN the evaluation model scores code quality
+- WHEN `npm audit --production` shows 0 vulnerabilities
+- THEN add a `+5 bonus` to the code quality score (up to 100 max)
+- AND add a checklist item: `"Dependency Health: 0 vulnerabilities (security excellent)"`
+
+#### Scenario: Vulnerability penalty
+
+- GIVEN the evaluation model scores code quality
+- WHEN `npm audit --production` reports vulnerabilities
+- THEN:
+  - Critical vulnerabilities: `-10 points` per critical issue
+  - High vulnerabilities: `-5 points` per high issue
+  - Medium/Low: `-1 point` per issue
+  - Final code quality score clamped to 0-100
+- AND add a checklist item: `"Dependency Health: N vulnerabilities limit code quality to {score}/100"`
+
+#### Scenario: Outdated dependency observation
+
+- GIVEN the evaluation model analyzes dependencies
+- WHEN multiple dependencies have available updates
+- THEN add a note to the checklist:
+  - `"Multiple packages outdated. Recommend: npm update (carefully with tests)"`
+  - Only penalize if vulnerabilities exist; recommend updates for quality
+
+#### Scenario: Dependency health in PROMPT_build.md
+
+- GIVEN the build prompt instructs the agent
+- THEN it SHALL highlight:
+  - `npm audit --production` output before implementing features
+  - If vulnerabilities exist, prioritize fixes before feature work
+  - **REWARD: Keep dependencies up-to-date.** Fixing vulnerabilities improves fitness scores.
+  - Suggestion to run `npm update` after major features are complete
+
+#### Scenario: Dependency health in PROMPT_plan.md
+
+- GIVEN the planning prompt instructs the agent
+- THEN it SHALL:
+  - Include `npm audit --production` analysis in the gap analysis
+  - Prioritize critical dependency updates at the top of IMPLEMENTATION_PLAN.md
+  - E.g. "Critical: Fix 3 high-severity security vulnerabilities in {package}"
+  - Suggest minor updates as opportunistic improvements after core features
+
 ### Requirement: AGENTS.md
 
 The system SHALL include a concise AGENTS.md file.

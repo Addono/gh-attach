@@ -2,6 +2,8 @@
 0b. Study IMPLEMENTATION_PLAN.md.
 0c. Study `src/` and `test/` for reference.
 0d. Study AGENTS.md for build/test/lint commands.
+0e. IMPORTANT: If `npm audit --production` reports vulnerabilities, address them FIRST
+   before implementing features. Update to fixed versions and test thoroughly.
 
 1. Choose the most important incomplete item from IMPLEMENTATION_PLAN.md.
    Before making changes, search the codebase thoroughly (don't assume
@@ -17,12 +19,15 @@
    - `npm run lint` — fix any lint errors
    - `npm test` — fix any test failures
      If anything fails, fix it before proceeding.
+   - `npm audit --production` — if vulnerabilities exist, update packages
+     and verify tests still pass; document any compatibility issues
 
 4. When you discover issues or learn something new:
    - Update IMPLEMENTATION_PLAN.md immediately
    - Add notes about edge cases or decisions made
+   - Note any dependency updates made and why
 
-5. When all checks pass:
+5. When all checks pass (including npm audit with no critical vulnerabilities):
    - Mark the task as complete in IMPLEMENTATION_PLAN.md
    - Stage all changes: `git add -A`
    - Commit with a descriptive conventional commit message:
@@ -37,6 +42,7 @@
    - Document the "why", not the "what"
    - All exports should have JSDoc comments
    - Use async/await consistently
+   - **REWARD: Keep dependencies up-to-date.** Fixing vulnerabilities improves fitness scores.
    - Capture the "why" in documentation and comments
 
 7. Keep IMPLEMENTATION_PLAN.md current — future iterations depend on it.
