@@ -95,6 +95,59 @@ describe("CLI action error handlers", () => {
     exitSpy.mockRestore();
   });
 
+  describe("preAction hook sets globalOptions", () => {
+    it("sets verbose from --verbose flag", async () => {
+      mockUploadCommand.mockResolvedValue(undefined);
+      const program = createProgram();
+      await program.parseAsync([
+        "node",
+        "gh-attach",
+        "--verbose",
+        "upload",
+        "--target",
+        "a/b#1",
+        "test.png",
+      ]);
+
+      const { globalOptions } = await import("../../../src/cli/output.js");
+      expect(globalOptions.verbose).toBe(true);
+    });
+
+    it("sets quiet from --quiet flag", async () => {
+      mockUploadCommand.mockResolvedValue(undefined);
+      const program = createProgram();
+      await program.parseAsync([
+        "node",
+        "gh-attach",
+        "--quiet",
+        "upload",
+        "--target",
+        "a/b#1",
+        "test.png",
+      ]);
+
+      const { globalOptions } = await import("../../../src/cli/output.js");
+      expect(globalOptions.quiet).toBe(true);
+    });
+
+    it("sets noColor from --no-color flag", async () => {
+      mockUploadCommand.mockResolvedValue(undefined);
+      const program = createProgram();
+      await program.parseAsync([
+        "node",
+        "gh-attach",
+        "--no-color",
+        "upload",
+        "--target",
+        "a/b#1",
+        "test.png",
+      ]);
+
+      const { globalOptions } = await import("../../../src/cli/output.js");
+      expect(globalOptions.noColor).toBe(true);
+    });
+  });
+
   describe("upload command error handling", () => {
     it("should exit with code 3 for ValidationError", async () => {
       mockUploadCommand.mockRejectedValue(

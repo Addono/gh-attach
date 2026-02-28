@@ -56,4 +56,93 @@ describe("MCP Streamable HTTP transport", () => {
 
     await client.close();
   });
+
+  it("returns 404 for unknown paths", async () => {
+    const res = await fetch(new URL("/unknown", baseUrl));
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Not found");
+  });
+
+  it("returns 400 for POST with empty body", async () => {
+    const res = await fetch(baseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "  ",
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Missing request body");
+  });
+
+  it("returns 400 for POST with invalid JSON", async () => {
+    const res = await fetch(baseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{invalid json!",
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Invalid JSON");
+  });
+
+  it("returns 400 for POST with non-initialize request and no session ID", async () => {
+    const res = await fetch(baseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "tools/list",
+        id: 1,
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Missing mcp-session-id header");
+  });
+
+  it("returns 404 for POST with unknown session ID", async () => {
+    const res = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "mcp-session-id": "nonexistent-session-id",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "tools/list",
+        id: 1,
+      }),
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Session not found");
+  });
+
+  it("returns 405 for GET without session ID", async () => {
+    const res = await fetch(baseUrl, { method: "GET" });
+    expect(res.status).toBe(405);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Method not allowed");
+  });
+
+  it("returns 404 for GET with unknown session ID", async () => {
+    const res = await fetch(baseUrl, {
+      method: "GET",
+      headers: { "mcp-session-id": "nonexistent" },
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Session not found");
+  });
+
+  it("returns 404 for DELETE with unknown session ID", async () => {
+    const res = await fetch(baseUrl, {
+      method: "DELETE",
+      headers: { "mcp-session-id": "nonexistent" },
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Session not found");
+  });
 });

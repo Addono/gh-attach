@@ -17,10 +17,10 @@ export default defineConfig({
         "**/*.config.js",
       ],
       thresholds: {
-        lines: 75,
-        functions: 85,
-        branches: 78,
-        statements: 75,
+        lines: 90,
+        functions: 90,
+        branches: 85,
+        statements: 90,
       },
     },
     projects: [

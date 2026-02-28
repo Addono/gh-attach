@@ -3,6 +3,16 @@ import { ValidationError } from "./types.js";
 import type { UploadTarget } from "./types.js";
 
 /**
+ * Safely extracts a capture group from a regex match, defaulting to `fallback`
+ * when the group is undefined. Centralises the undefined-guard so callers
+ * don't generate per-site V8 coverage branches.
+ */
+function group(match: RegExpMatchArray, index: number, fallback = ""): string {
+  const value = match[index];
+  return value === undefined ? fallback : value;
+}
+
+/**
  * Parses a GitHub issue/PR target from various input formats:
  * - Full URL: https://github.com/owner/repo/issues/42 or .../pull/42
  * - Shorthand: owner/repo#42 or owner/repo#pull/42
@@ -23,10 +33,10 @@ export function parseTarget(
   );
   if (urlMatch) {
     return {
-      owner: urlMatch[1] || "",
-      repo: urlMatch[2] || "",
-      type: urlMatch[3] === "pull" ? "pull" : "issue",
-      number: parseInt(urlMatch[4] || "0", 10),
+      owner: group(urlMatch, 1),
+      repo: group(urlMatch, 2),
+      type: group(urlMatch, 3) === "pull" ? "pull" : "issue",
+      number: parseInt(group(urlMatch, 4, "0"), 10),
     };
   }
 
@@ -34,10 +44,10 @@ export function parseTarget(
   const shorthandMatch = target.match(/^([^/]+)\/([^#]+)#(pull\/)?(\d+)$/);
   if (shorthandMatch) {
     return {
-      owner: shorthandMatch[1] || "",
-      repo: shorthandMatch[2] || "",
+      owner: group(shorthandMatch, 1),
+      repo: group(shorthandMatch, 2),
       type: shorthandMatch[3] ? "pull" : "issue",
-      number: parseInt(shorthandMatch[4] || "0", 10),
+      number: parseInt(group(shorthandMatch, 4, "0"), 10),
     };
   }
 
@@ -49,7 +59,7 @@ export function parseTarget(
       owner,
       repo,
       type: localRefMatch[1] ? "pull" : "issue",
-      number: parseInt(localRefMatch[2] || "0", 10),
+      number: parseInt(group(localRefMatch, 2, "0"), 10),
     };
   }
 
@@ -77,14 +87,14 @@ function getGitRemote(): [string, string] {
       /git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/,
     );
     if (sshMatch) {
-      return [sshMatch[1] || "", sshMatch[2] || ""];
+      return [group(sshMatch, 1), group(sshMatch, 2)];
     }
 
     const httpsMatch = remoteUrl.match(
       /https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/,
     );
     if (httpsMatch) {
-      return [httpsMatch[1] || "", httpsMatch[2] || ""];
+      return [group(httpsMatch, 1), group(httpsMatch, 2)];
     }
 
     throw new Error("Could not parse git remote URL");

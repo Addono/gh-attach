@@ -407,6 +407,28 @@ describe("MCP server handlers", () => {
     expect(existsSync(tempUploadPath)).toBe(false);
   });
 
+  it("outer catch wraps unexpected thrown non-Error values with isError=true", async () => {
+    // Make parseTarget throw a non-Error value to trigger the outer catch block
+    hoisted.mockParseTarget.mockImplementation(() => {
+      throw "unexpected string error";
+    });
+    process.env.GITHUB_TOKEN = "ghs_test";
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({
+      params: {
+        name: "upload_image",
+        arguments: {
+          filePath: "/tmp/example.png",
+          target: "octo/repo#42",
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    expect(response.content[0]?.text).toContain("unexpected string error");
+  });
+
   it("returns unknown tool errors with isError=true", async () => {
     const { call } = await startServerAndGetHandlers();
     const response = await call({
