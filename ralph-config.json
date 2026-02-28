@@ -10,6 +10,7 @@
     "claude-sonnet-4.5"
   ],
   "evaluationModel": "claude-haiku-4.5",
-  "trackingRepo": "",
-  "timeout": 600000
+  "trackingRepo": "Addono/github-attach",
+  "timeout": 600000,
+  "trackingIssueNumber": 1
 }

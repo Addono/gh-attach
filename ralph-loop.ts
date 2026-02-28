@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { execSync } from "child_process";
-import { CopilotClient } from "@github/copilot-sdk";
+import { CopilotClient, approveAll, type SessionEvent } from "@github/copilot-sdk";
 
 // --- Types ---
 
@@ -156,7 +156,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences):
 
   const session = await client.createSession({
     model: config.evaluationModel,
-    workingDirectory: process.cwd(),
+    onPermissionRequest: approveAll,
   });
 
   try {
@@ -165,11 +165,8 @@ Respond with ONLY a valid JSON object (no markdown, no code fences):
       120_000,
     );
 
-    // Extract JSON from response
-    const text =
-      typeof response === "string"
-        ? response
-        : JSON.stringify(response);
+    // Extract JSON from assistant message content
+    const text = response?.data?.content ?? "";
     const jsonMatch = text.match(/\{[\s\S]*"aggregate"[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]) as FitnessScores;
@@ -372,12 +369,11 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
 
       const session = await client.createSession({
         model: state.currentModel,
-        workingDirectory: process.cwd(),
-        onPermissionRequest: async () => ({ allow: true }),
+        onPermissionRequest: approveAll,
       });
 
-      session.on((event: { type: string; data?: { toolName?: string } }) => {
-        if (event.type === "tool.execution_start" && event.data?.toolName) {
+      session.on((event: SessionEvent) => {
+        if (event.type === "tool.execution_start") {
           log(`  ⚙ ${event.data.toolName}`);
         }
       });
