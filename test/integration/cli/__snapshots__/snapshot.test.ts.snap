@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CLI Help Output Snapshots > should match config command help output 1`] = `
+"Usage: gh-attach config [options] <action> [key] [value]
+
+Manage gh-attach configuration
+
+Arguments:
+  action      Action: list, set, get
+  key         Configuration key
+  value       Configuration value
+
+Options:
+  -h, --help  display help for command"
+`;
+
+exports[`CLI Help Output Snapshots > should match login command help output 1`] = `
+"Usage: gh-attach login [options]
+
+Authenticate with GitHub via browser
+
+Options:
+  --state-path <path>  Path to save session state
+  --status             Check current authentication status
+  -h, --help           display help for command"
+`;
+
+exports[`CLI Help Output Snapshots > should match main help output 1`] = `
+"Usage: gh-attach [options] [command]
+
+Upload images to GitHub issues, PRs, and comments
+
+Options:
+  -V, --version                  output the version number
+  -h, --help                     display help for command
+
+Commands:
+  upload [options] <files...>    Upload an image and get a markdown embed URL
+  login [options]                Authenticate with GitHub via browser
+  config <action> [key] [value]  Manage gh-attach configuration
+  mcp [options]                  Start the MCP server
+  help [command]                 display help for command"
+`;
+
+exports[`CLI Help Output Snapshots > should match mcp command help output 1`] = `
+"Usage: gh-attach mcp [options]
+
+Start the MCP server
+
+Options:
+  --transport <type>  Transport: stdio, http (default: "stdio")
+  --port <number>     Port for HTTP transport (default: "3000")
+  -h, --help          display help for command"
+`;
+
+exports[`CLI Help Output Snapshots > should match upload command help output 1`] = `
+"Usage: gh-attach upload [options] <files...>
+
+Upload an image and get a markdown embed URL
+
+Arguments:
+  files              Image file(s) to upload
+
+Options:
+  --target <ref>     GitHub issue/PR reference (owner/repo#N, #N, or URL)
+  --strategy <name>  Upload strategy to use
+  --format <type>    Output format: markdown, url, json (default: "markdown")
+  --stdin            Read image from stdin
+  --filename <name>  Filename when using --stdin
+  -h, --help         display help for command"
+`;

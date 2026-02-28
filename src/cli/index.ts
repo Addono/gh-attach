@@ -1,15 +1,16 @@
-#!/usr/bin/env node
-
 /**
  * gh-attach CLI entry point.
  */
 
 import { readFileSync } from "fs";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 import { Command } from "commander";
 
-const pkg = JSON.parse(
-  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
-);
+// Get package.json from the project root (works in both src and dist)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkgPath = resolve(__dirname, "..", "package.json");
+const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version: string };
 
 const program = new Command();
 
