@@ -28,8 +28,21 @@ describe("isSessionIdleTimeoutError", () => {
     expect(isSessionIdleTimeoutError(err)).toBe(true);
   });
 
+  it("detects timeout errors from plain strings", () => {
+    expect(
+      isSessionIdleTimeoutError("Timeout after 180000ms waiting for session.idle"),
+    ).toBe(true);
+  });
+
+  it("detects timeout errors nested under cause", () => {
+    const err = {
+      message: "request failed",
+      cause: new Error("Timeout after 180000ms waiting for session.idle"),
+    };
+    expect(isSessionIdleTimeoutError(err)).toBe(true);
+  });
+
   it("returns false for non-timeout errors", () => {
     expect(isSessionIdleTimeoutError(new Error("Network failure"))).toBe(false);
   });
 });
-

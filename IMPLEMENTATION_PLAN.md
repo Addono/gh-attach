@@ -226,4 +226,16 @@ This plan lists prioritized tasks required to bring the implementation into full
     - Added CI status summaries to GitHub fitness comments and CI-blocked issue notifications (`🚨 CI BLOCKED at Iteration N`) with failure details.
     - Added lint warning aggregation (top rules/files) and threshold warning log when warnings exceed 20.
     - Tracking issue creation now includes required labels: `ralph-loop`, `automated`.
+  - Validation run after this change: `npm run typecheck`, `npm run lint`, `npm test`, and `npm audit --production` all pass; audit reports 0 vulnerabilities.
+
+## 18. Ralph Loop Evaluation Timeout Detection Hardening
+- **Task:** Harden detection of Copilot `session.idle` timeout error shapes so evaluation retry logic reliably triggers instead of falling back to `aggregate=0`. **[COMPLETE]**
+  - **Spec:** Ralph-loop/spec.md (Fitness evaluation process, scoring card continuity)
+  - **Files:** src/ralph/evaluation.ts
+  - **Tests:** test/unit/ralph/evaluation.test.ts
+  - **Dependencies:** Task 16
+  - **Notes:**
+    - Targets the regression observed at iteration 25 where evaluation timed out and fallback scoring forced `aggregate=0`.
+    - Expanded timeout detection to inspect string errors, `Error` instances, and nested `cause` chains used by SDK-wrapped errors.
+    - Keeps retry behavior behavior-safe while reducing false negatives in timeout detection.
     - Validation run after this change: `npm run typecheck`, `npm run lint`, `npm test`, and `npm audit --production` all pass; audit reports 0 vulnerabilities.

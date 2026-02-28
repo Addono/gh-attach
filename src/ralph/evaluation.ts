@@ -21,8 +21,38 @@ export function resolveEvaluationTimeoutMs(iterationTimeoutMs: number): number {
  * Detect the Copilot SDK timeout shape emitted when waiting for session idle.
  */
 export function isSessionIdleTimeoutError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const message = "message" in error ? String(error.message) : "";
-  return /timeout.*session\.idle/i.test(message);
+  const messages = collectErrorMessages(error);
+  return messages.some((message) =>
+    /(timeout.*session\.idle|session\.idle.*timeout)/i.test(message),
+  );
 }
 
+function collectErrorMessages(error: unknown, depth = 0): string[] {
+  if (depth > 4 || error === null || error === undefined) return [];
+
+  if (typeof error === "string") {
+    return [error];
+  }
+
+  if (error instanceof Error) {
+    return [
+      error.message,
+      String(error),
+      ...collectErrorMessages(error.cause, depth + 1),
+    ].filter((value) => value.length > 0);
+  }
+
+  if (typeof error === "object") {
+    const raw = error as Record<string, unknown>;
+    const messages = [
+      typeof raw.message === "string" ? raw.message : "",
+      typeof raw.error === "string" ? raw.error : "",
+      typeof raw.details === "string" ? raw.details : "",
+      String(error),
+      ...collectErrorMessages(raw.cause, depth + 1),
+    ];
+    return messages.filter((value) => value.length > 0);
+  }
+
+  return [String(error)];
+}
