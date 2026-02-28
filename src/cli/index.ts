@@ -4,14 +4,17 @@
  * gh-attach CLI entry point.
  */
 
+import { readFileSync } from "fs";
 import { Command } from "commander";
+
+const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
 
 const program = new Command();
 
 program
   .name("gh-attach")
   .description("Upload images to GitHub issues, PRs, and comments")
-  .version("0.0.0-development");
+  .version(pkg.version);
 
 program
   .command("upload")
@@ -22,10 +25,18 @@ program
   .option("--format <type>", "Output format: markdown, url, json", "markdown")
   .option("--stdin", "Read image from stdin")
   .option("--filename <name>", "Filename when using --stdin")
-  .action(async (_files, _options) => {
-    // TODO: Implement upload command
-    console.error("Upload command not yet implemented");
-    process.exit(1);
+  .action(async (files, options) => {
+    try {
+      const { uploadCommand } = await import("./commands/upload.js");
+      await uploadCommand(files, options);
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error(`Error: ${err.message}`);
+      } else {
+        console.error(`Error: ${String(err)}`);
+      }
+      process.exit(1);
+    }
   });
 
 program
@@ -33,10 +44,18 @@ program
   .description("Authenticate with GitHub via browser")
   .option("--state-path <path>", "Path to save session state")
   .option("--status", "Check current authentication status")
-  .action(async (_options) => {
-    // TODO: Implement login command
-    console.error("Login command not yet implemented");
-    process.exit(1);
+  .action(async (options) => {
+    try {
+      const { loginCommand } = await import("./commands/login.js");
+      await loginCommand(options);
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error(`Error: ${err.message}`);
+      } else {
+        console.error(`Error: ${String(err)}`);
+      }
+      process.exit(1);
+    }
   });
 
 program
@@ -45,10 +64,18 @@ program
   .argument("<action>", "Action: list, set, get")
   .argument("[key]", "Configuration key")
   .argument("[value]", "Configuration value")
-  .action(async (_action, _key, _value) => {
-    // TODO: Implement config command
-    console.error("Config command not yet implemented");
-    process.exit(1);
+  .action(async (action, key, value) => {
+    try {
+      const { configCommand } = await import("./commands/config.js");
+      await configCommand(action, key, value);
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error(`Error: ${err.message}`);
+      } else {
+        console.error(`Error: ${String(err)}`);
+      }
+      process.exit(1);
+    }
   });
 
 program
@@ -56,10 +83,19 @@ program
   .description("Start the MCP server")
   .option("--transport <type>", "Transport: stdio, http", "stdio")
   .option("--port <number>", "Port for HTTP transport", "3000")
-  .action(async (_options) => {
-    // TODO: Implement MCP server command
-    console.error("MCP server not yet implemented");
-    process.exit(1);
+  .action(async (options) => {
+    try {
+      const { mcpCommand } = await import("./commands/mcp.js");
+      await mcpCommand(options);
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error(`Error: ${err.message}`);
+      } else {
+        console.error(`Error: ${String(err)}`);
+      }
+      process.exit(1);
+    }
   });
 
 program.parse();
+
