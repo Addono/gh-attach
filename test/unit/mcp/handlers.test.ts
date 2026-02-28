@@ -309,19 +309,34 @@ describe("MCP Server - Handler Functions", () => {
     });
 
     it("login tool should exist with empty schema", () => {
-      const toolNames = ["upload_image", "login", "check_auth", "list_strategies"];
+      const toolNames = [
+        "upload_image",
+        "login",
+        "check_auth",
+        "list_strategies",
+      ];
 
       expect(toolNames).toContain("login");
     });
 
     it("check_auth tool should exist", () => {
-      const toolNames = ["upload_image", "login", "check_auth", "list_strategies"];
+      const toolNames = [
+        "upload_image",
+        "login",
+        "check_auth",
+        "list_strategies",
+      ];
 
       expect(toolNames).toContain("check_auth");
     });
 
     it("list_strategies tool should exist", () => {
-      const toolNames = ["upload_image", "login", "check_auth", "list_strategies"];
+      const toolNames = [
+        "upload_image",
+        "login",
+        "check_auth",
+        "list_strategies",
+      ];
 
       expect(toolNames).toContain("list_strategies");
     });

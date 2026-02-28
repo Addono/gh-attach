@@ -52,9 +52,7 @@ describe.skipIf(!E2E_ENABLED)("E2E Upload Tests", () => {
 
     const parsed = parseRepo();
     if (!parsed) {
-      throw new Error(
-        "E2E_TEST_REPO must be in format 'owner/repo'",
-      );
+      throw new Error("E2E_TEST_REPO must be in format 'owner/repo'");
     }
 
     repoInfo = parsed;
@@ -140,7 +138,9 @@ describe.skipIf(!E2E_ENABLED)("E2E Upload Tests", () => {
       const result = await strategy.upload(TEST_IMAGE_PATH, target);
 
       // Verify result
-      expect(result.url).toMatch(/^https:\/\/github\.com\/.+\/releases\/download\//);
+      expect(result.url).toMatch(
+        /^https:\/\/github\.com\/.+\/releases\/download\//,
+      );
       expect(result.markdown).toMatch(/^!\[test-image.*\.png\]\(https:\/\//);
       expect(result.strategy).toBe("release-asset");
 

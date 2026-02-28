@@ -423,7 +423,8 @@ describe("Browser Session Strategy", () => {
 
       expect(result).toEqual({
         url: "https://user-images.githubusercontent.com/test.png",
-        markdown: "![test.png](https://user-images.githubusercontent.com/test.png)",
+        markdown:
+          "![test.png](https://user-images.githubusercontent.com/test.png)",
         strategy: "browser-session",
       });
     });
@@ -462,10 +463,16 @@ describe("Browser Session Strategy", () => {
       await strategy.upload(mockFilePath, mockTarget);
 
       // Verify form fields were appended
-      expect(formDataAppends).toContainEqual({ key: "key", value: "uploads/image.jpg" });
+      expect(formDataAppends).toContainEqual({
+        key: "key",
+        value: "uploads/image.jpg",
+      });
       expect(formDataAppends).toContainEqual({ key: "policy", value: "abc" });
-      expect(formDataAppends).toContainEqual({ key: "signature", value: "xyz" });
-      expect(formDataAppends.some(a => a.key === "file")).toBe(true);
+      expect(formDataAppends).toContainEqual({
+        key: "signature",
+        value: "xyz",
+      });
+      expect(formDataAppends.some((a) => a.key === "file")).toBe(true);
     });
 
     it("handles filenames with special characters", async () => {
@@ -527,7 +534,9 @@ describe("Browser Session Strategy", () => {
         "SESSION_EXPIRED",
         {},
       );
-      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(authError);
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        authError,
+      );
 
       await expect(strategy.upload(mockFilePath, mockTarget)).rejects.toBe(
         authError,

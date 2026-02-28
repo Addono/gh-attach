@@ -6,6 +6,32 @@ import { readFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { Command } from "commander";
+import {
+  AuthenticationError,
+  ValidationError,
+  UploadError,
+} from "../core/types.js";
+
+/**
+ * Exit codes per CLI specification:
+ * - 0: Success
+ * - 1: General error
+ * - 2: Authentication error
+ * - 3: Validation error
+ * - 4: Network/upload error
+ */
+function getExitCode(err: unknown): number {
+  if (err instanceof AuthenticationError) {
+    return 2;
+  }
+  if (err instanceof ValidationError) {
+    return 3;
+  }
+  if (err instanceof UploadError) {
+    return 4;
+  }
+  return 1;
+}
 
 // Get package.json from the project root (works in both src and dist)
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -41,7 +67,7 @@ program
       } else {
         console.error(`Error: ${String(err)}`);
       }
-      process.exit(1);
+      process.exit(getExitCode(err));
     }
   });
 
@@ -60,7 +86,7 @@ program
       } else {
         console.error(`Error: ${String(err)}`);
       }
-      process.exit(1);
+      process.exit(getExitCode(err));
     }
   });
 
@@ -80,7 +106,7 @@ program
       } else {
         console.error(`Error: ${String(err)}`);
       }
-      process.exit(1);
+      process.exit(getExitCode(err));
     }
   });
 
@@ -99,7 +125,7 @@ program
       } else {
         console.error(`Error: ${String(err)}`);
       }
-      process.exit(1);
+      process.exit(getExitCode(err));
     }
   });
 

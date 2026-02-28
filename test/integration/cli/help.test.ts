@@ -15,9 +15,8 @@ describe("CLI command documentation", () => {
   });
 
   it("upload command has proper description", async () => {
-    const { uploadCommand } = await import(
-      "../../../src/cli/commands/upload.js"
-    );
+    const { uploadCommand } =
+      await import("../../../src/cli/commands/upload.js");
     // The uploadCommand is called with options, so we test the module's interface
     // by checking that it's an async function
     expect(typeof uploadCommand).toBe("function");
@@ -29,7 +28,8 @@ describe("CLI command documentation", () => {
   });
 
   it("config command has proper description", async () => {
-    const { configCommand } = await import("../../../src/cli/commands/config.js");
+    const { configCommand } =
+      await import("../../../src/cli/commands/config.js");
     expect(typeof configCommand).toBe("function");
   });
 
@@ -58,4 +58,3 @@ describe("CLI command documentation", () => {
     expect(mcp).toBeDefined();
   });
 });
-
