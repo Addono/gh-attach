@@ -252,6 +252,7 @@ interface FallbackCommandResults {
   test: CommandCheckResult;
   lint: CommandCheckResult;
   audit: CommandCheckResult;
+  typecheck: CommandCheckResult;
 }
 
 export interface FallbackFitnessScores {
@@ -326,17 +327,18 @@ function computeFallbackCodeQuality(
 
 /**
  * Build health reflects the full CI pipeline, not just the build step.
- * A fully green CI (build + test + lint all pass) earns a higher score.
+ * A fully green CI (build + typecheck + test + lint all pass) earns a higher score.
  */
 function computeFallbackBuildHealthScore(
   build: CommandCheckResult,
+  typecheck: CommandCheckResult,
   test: CommandCheckResult,
   lint: CommandCheckResult,
 ): number {
   if (!build.success) return 10;
+  if (!typecheck.success) return 20;
   if (!test.success) return 35;
   if (!lint.success) return 55;
-  // All three pass — healthy CI pipeline
   return 85;
 }
 
@@ -358,6 +360,7 @@ export function deriveFallbackFitnessScores(
   );
   const buildHealth = computeFallbackBuildHealthScore(
     results.build,
+    results.typecheck,
     results.test,
     results.lint,
   );

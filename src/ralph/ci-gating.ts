@@ -6,6 +6,7 @@ export interface CommandCheckResult {
 export type CiBuildStatus = "success" | "failed" | "skipped";
 export type CiTestStatus = "success" | "failed" | "skipped";
 export type CiLintStatus = "success" | "warnings" | "failed" | "skipped";
+export type CiTypecheckStatus = "success" | "failed" | "skipped";
 
 /** Persisted CI status snapshot used for iteration gating and reporting. */
 export interface CiStatus {
@@ -14,9 +15,11 @@ export interface CiStatus {
   buildStatus: CiBuildStatus;
   testStatus: CiTestStatus;
   lintStatus: CiLintStatus;
+  typecheckStatus: CiTypecheckStatus;
   buildError?: string;
   testError?: string;
   lintError?: string;
+  typecheckError?: string;
   lintWarningCount?: number;
   lintWarningRules?: string[];
   lintWarningFiles?: string[];
@@ -37,6 +40,7 @@ export function defaultCiStatus(): CiStatus {
     buildStatus: "skipped",
     testStatus: "skipped",
     lintStatus: "skipped",
+    typecheckStatus: "skipped",
     lintWarningCount: 0,
     lintWarningRules: [],
     lintWarningFiles: [],
@@ -55,9 +59,12 @@ export function normalizeCiStatus(input: unknown): CiStatus {
     buildStatus: raw.buildStatus ?? base.buildStatus,
     testStatus: raw.testStatus ?? base.testStatus,
     lintStatus: raw.lintStatus ?? base.lintStatus,
+    typecheckStatus: raw.typecheckStatus ?? base.typecheckStatus,
     buildError: typeof raw.buildError === "string" ? raw.buildError : undefined,
     testError: typeof raw.testError === "string" ? raw.testError : undefined,
     lintError: typeof raw.lintError === "string" ? raw.lintError : undefined,
+    typecheckError:
+      typeof raw.typecheckError === "string" ? raw.typecheckError : undefined,
     lintWarningCount:
       typeof raw.lintWarningCount === "number" ? raw.lintWarningCount : 0,
     lintWarningRules: Array.isArray(raw.lintWarningRules)
@@ -108,6 +115,7 @@ export function deriveCiStatus(
   build: CommandCheckResult,
   test: CommandCheckResult,
   lint: CommandCheckResult,
+  typecheck: CommandCheckResult,
   checkedAt = new Date().toISOString(),
 ): { status: CiStatus; lintSummary: LintWarningSummary } {
   const lintSummary = parseLintWarnings(lint.output);
@@ -116,16 +124,30 @@ export function deriveCiStatus(
       ? "warnings"
       : "success"
     : "failed";
+  const typecheckStatus: CiTypecheckStatus = typecheck
+    ? typecheck.success
+      ? "success"
+      : "failed"
+    : "skipped";
 
   const status: CiStatus = {
-    passed: build.success && test.success && lintStatus !== "failed",
+    passed:
+      build.success &&
+      test.success &&
+      lintStatus !== "failed" &&
+      typecheckStatus !== "failed",
     lastCheck: checkedAt,
     buildStatus: build.success ? "success" : "failed",
     testStatus: test.success ? "success" : "failed",
     lintStatus,
+    typecheckStatus,
     buildError: build.success ? undefined : build.output.slice(0, 200),
     testError: test.success ? undefined : test.output.slice(0, 200),
     lintError: lint.success ? undefined : lint.output.slice(0, 200),
+    typecheckError:
+      typecheck && !typecheck.success
+        ? typecheck.output.slice(0, 200)
+        : undefined,
     lintWarningCount: lintSummary.count,
     lintWarningRules: lintSummary.topRules,
     lintWarningFiles: lintSummary.topFiles,
@@ -139,7 +161,8 @@ export function isCiBroken(ciStatus: CiStatus): boolean {
   return (
     ciStatus.buildStatus === "failed" ||
     ciStatus.testStatus === "failed" ||
-    ciStatus.lintStatus === "failed"
+    ciStatus.lintStatus === "failed" ||
+    ciStatus.typecheckStatus === "failed"
   );
 }
 
@@ -152,11 +175,12 @@ export function generateCiPromptContext(ciStatus: CiStatus): string {
       ciStatus.buildError,
       ciStatus.testError,
       ciStatus.lintError,
+      ciStatus.typecheckError,
     ]
       .filter((v): v is string => Boolean(v))
       .map((v) => `- ${v.replace(/\s+/g, " ").slice(0, 200)}`)
       .join("\n");
-    return `\n[CI Status] ❌ Build/Test/Lint failures detected\n${details ? `Failure details:\n${details}\n` : ""}Do not work on new features. Instead, focus EXCLUSIVELY on fixing the failing CI.\n`;
+    return `\n[CI Status] ❌ Build/Test/Lint/Typecheck failures detected\n${details ? `Failure details:\n${details}\n` : ""}Do not work on new features. Instead, focus EXCLUSIVELY on fixing the failing CI.\n`;
   }
 
   if (ciStatus.lintStatus === "warnings") {
@@ -176,16 +200,18 @@ export function generateCiCommentSummary(ciStatus: CiStatus): string {
       ciStatus.buildStatus === "failed" ? "build" : null,
       ciStatus.testStatus === "failed" ? "test" : null,
       ciStatus.lintStatus === "failed" ? "lint" : null,
-    ]
-      .filter((v): v is string => Boolean(v))
-      .join(", ");
+      ciStatus.typecheckStatus === "failed" ? "typecheck" : null,
+    ].filter((v): v is string => Boolean(v));
 
+    const failureLabel =
+      failures.length > 0 ? failures.join(", ") : "build/test/lint/typecheck";
     const error =
       ciStatus.buildError ??
       ciStatus.testError ??
       ciStatus.lintError ??
+      ciStatus.typecheckError ??
       "no details";
-    return `❌ CI: Build/Test/Lint failed (${failures}) — ${error.replace(/\s+/g, " ").slice(0, 200)}`;
+    return `❌ CI: ${failureLabel} failed — ${error.replace(/\s+/g, " ").slice(0, 200)}`;
   }
 
   if (ciStatus.lintStatus === "warnings") {
@@ -204,6 +230,7 @@ export function generateCiBlockedComment(
     ciStatus.buildStatus === "failed" ? "build" : null,
     ciStatus.testStatus === "failed" ? "test" : null,
     ciStatus.lintStatus === "failed" ? "lint" : null,
+    ciStatus.typecheckStatus === "failed" ? "typecheck" : null,
   ]
     .filter((v): v is string => Boolean(v))
     .join(", ");
@@ -212,6 +239,7 @@ export function generateCiBlockedComment(
     ciStatus.buildError ??
     ciStatus.testError ??
     ciStatus.lintError ??
+    ciStatus.typecheckError ??
     "No error message captured"
   )
     .replace(/\s+/g, " ")

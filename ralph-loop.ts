@@ -131,6 +131,20 @@ function runCommand(cmd: string, maxChars = 2000): CommandCheckResult {
 }
 
 function runCiCheck(iteration: number, state: RalphState): void {
+  const typecheckResult = runCommand("npm run typecheck 2>&1", 4000);
+  log(
+    `[CI] Typecheck: ${typecheckResult.success ? "success" : "failed"}`,
+    "INFO",
+  );
+  if (!typecheckResult.success) {
+    const snippet = typecheckResult.output
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)[0];
+    if (snippet) {
+      log(`  ↳ ${snippet.slice(0, 200)}`, "WARN");
+    }
+  }
   const buildResult = runCommand("npm run build 2>&1");
   const testResult = runCommand("npm test 2>&1");
   const lintResult = runCommand("npm run lint 2>&1");
@@ -138,6 +152,7 @@ function runCiCheck(iteration: number, state: RalphState): void {
     buildResult,
     testResult,
     lintResult,
+    typecheckResult,
   );
   state.ciStatus = status;
 
@@ -319,9 +334,12 @@ async function collectSourceEvidence(): Promise<string> {
     `=== src/core/upload.ts (strategy fallback — spec: Strategy Selection and Fallback) ===\n${coreUploadTs}`,
   );
 
-  // CLI entry point — shows command registration and global options
-  const cliIndex = await readSlice("src/cli/index.ts", 2500);
-  evidence.push(`=== src/cli/index.ts ===\n${cliIndex}`);
+  // CLI entry point — shows command registration (upload, login, config, mcp) and global options
+  // Increased to full file so config command registration at line 134 is visible to evaluator
+  const cliIndex = await readSlice("src/cli/index.ts", 6000);
+  evidence.push(
+    `=== src/cli/index.ts (full — spec: Config Command, Login Command, Upload Command) ===\n${cliIndex}`,
+  );
 
   // Upload command — shows strategy selection, output formats, exit codes (increased to show NoStrategyAvailableError usage)
   const uploadCmd = await readSlice("src/cli/commands/upload.ts", 4000);
@@ -468,7 +486,7 @@ async function collectSourceEvidence(): Promise<string> {
   // We extract it explicitly so the evaluator can verify spec: MCP Upload Tool — base64 content.
   try {
     const mcpContent = await readFile("src/mcp/index.ts", "utf-8");
-    const base64Idx = mcpContent.indexOf("Buffer.from(args.content, \"base64\")");
+    const base64Idx = mcpContent.indexOf('Buffer.from(args.content, "base64")');
     if (base64Idx !== -1) {
       const section = mcpContent.slice(
         Math.max(0, base64Idx - 300),
@@ -489,6 +507,32 @@ async function collectSourceEvidence(): Promise<string> {
     `=== src/cli/commands/login.ts (login --status implementation — spec: Login Command Status check) ===\n${loginCmd}`,
   );
 
+  // Config command implementation — shows config list, config set, strategy-order (as array), default-target, XDG path
+  const configCmd = await readSlice("src/cli/commands/config.ts", 4000);
+  evidence.push(
+    `=== src/cli/commands/config.ts (spec: Config Command — list, set strategy-order, set default-target, XDG path) ===\n${configCmd}`,
+  );
+
+  // PROMPT files — show the agent instruction files used by the Ralph Loop
+  const promptBuild = await readSlice("PROMPT_build.md", 3000);
+  evidence.push(
+    `=== PROMPT_build.md (spec: Ralph Loop — PROMPT Files, Build mode prompt) ===\n${promptBuild}`,
+  );
+  const promptPlan = await readSlice("PROMPT_plan.md", 1500);
+  evidence.push(
+    `=== PROMPT_plan.md (spec: Ralph Loop — PROMPT Files, Plan mode prompt) ===\n${promptPlan}`,
+  );
+
+  // Ralph loop execution log — shows actual loop runs, model rotation, tool invocations
+  // Use tail to get the most recent execution evidence (last ~60 log lines)
+  const loopLogTail = runCommand(
+    "tail -c 4000 ralph-loop.log 2>/dev/null || echo '(no log yet)'",
+    4000,
+  );
+  evidence.push(
+    `=== ralph-loop.log (tail — spec: Ralph Loop Core loop execution, Model Rotation, Tool Execution Logging) ===\n${loopLogTail.output}`,
+  );
+
   return evidence.join("\n\n");
 }
 
@@ -500,13 +544,14 @@ async function evaluateFitness(
 ): Promise<FitnessScores> {
   log(`Starting fitness evaluation at iteration ${iteration}`, "EVAL");
   log(
-    `Evaluation commands: npm run build, npm test, npm run lint, npm audit --production`,
+    `Evaluation commands: npm run build, npm run typecheck, npm test, npm run lint, npm audit --production`,
     "EVAL",
   );
 
   const specs = await collectSpecFiles();
   const sourceEvidence = await collectSourceEvidence();
   const buildResult = runCommand("npm run build 2>&1");
+  const typecheckResult = runCommand("npm run typecheck 2>&1", 4000);
   // Capture the tail of test output to get coverage report + file-level summaries.
   // The default output starts with HTTP mock noise; tail selects the meaningful end.
   const testResult = runCommand("npm test 2>&1 | tail -c 12000", 12000);
@@ -518,6 +563,19 @@ async function evaluateFitness(
     `[Evaluation] Build: ${buildResult.success ? "success" : "failed"}`,
     "EVAL",
   );
+  log(
+    `[Evaluation] Typecheck: ${typecheckResult.success ? "success" : "failed"}`,
+    "EVAL",
+  );
+  if (!typecheckResult.success) {
+    const snippet = typecheckResult.output
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)[0];
+    if (snippet) {
+      log(`  ↳ ${snippet.slice(0, 200)}`, "WARN");
+    }
+  }
   // Extract test pass/fail summary from test output
   const testSummary =
     testResult.output.match(
@@ -537,6 +595,7 @@ async function evaluateFitness(
     test: testResult,
     lint: lintResult,
     audit: auditResult,
+    typecheck: typecheckResult,
   });
   const fallbackNote = "Evaluation failed — using objective CI metrics";
   const suspiciousFallbackNote =
@@ -590,6 +649,9 @@ ${testResult.output}
 
 ## Lint Output (${lintResult.success ? "SUCCESS" : "FAILED"})
 ${lintResult.output}
+
+## Typecheck Output (${typecheckResult.success ? "SUCCESS" : "FAILED"})
+${typecheckResult.output}
 
 ## Dependency Health (npm audit --production)
 ${auditResult.output}

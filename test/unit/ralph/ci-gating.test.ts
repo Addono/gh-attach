@@ -41,6 +41,7 @@ describe("parseLintWarnings", () => {
 
 describe("deriveCiStatus", () => {
   it("marks lint warnings as partial but passing", () => {
+    const typecheck = { success: true, output: "typecheck ok" };
     const { status } = deriveCiStatus(
       { success: true, output: "build ok" },
       { success: true, output: "test ok" },
@@ -49,23 +50,45 @@ describe("deriveCiStatus", () => {
         output:
           "src/a.ts:1:1  warning  Unexpected any  @typescript-eslint/no-explicit-any",
       },
+      typecheck,
       "2026-01-01T00:00:00.000Z",
     );
 
     expect(status.passed).toBe(true);
     expect(status.lintStatus).toBe("warnings");
     expect(status.lintWarningCount).toBe(1);
+    expect(status.typecheckStatus).toBe("success");
   });
 
   it("marks CI broken when build fails", () => {
+    const typecheck = { success: true, output: "typecheck ok" };
     const { status } = deriveCiStatus(
       { success: false, output: "build failed" },
       { success: true, output: "test ok" },
       { success: true, output: "" },
+      typecheck,
     );
 
     expect(isCiBroken(status)).toBe(true);
     expect(status.buildStatus).toBe("failed");
+    expect(status.typecheckStatus).toBe("success");
+  });
+
+  it("marks CI broken when typecheck fails", () => {
+    const typecheck = {
+      success: false,
+      output: "typecheck failed: error TS1234",
+    };
+    const { status } = deriveCiStatus(
+      { success: true, output: "build ok" },
+      { success: true, output: "tests ok" },
+      { success: true, output: "" },
+      typecheck,
+    );
+
+    expect(status.typecheckStatus).toBe("failed");
+    expect(isCiBroken(status)).toBe(true);
+    expect(status.typecheckError).toBe("typecheck failed: error TS1234");
   });
 });
 
@@ -96,16 +119,62 @@ describe("prompt and comment helpers", () => {
     expect(ci.lintStatus).toBe("warnings");
     expect(ci.buildStatus).toBe("skipped");
   });
+
+  it("mentions typecheck failure in the blocked prompt context", () => {
+    const typecheckErrorMessage = "TypeScript compile failed at src/foo.ts:42";
+    const ci = {
+      ...defaultCiStatus(),
+      lastCheck: "2026-02-02T00:00:00.000Z",
+      passed: false,
+      typecheckStatus: "failed" as const,
+      typecheckError: typecheckErrorMessage,
+    };
+    const ctx = generateCiPromptContext(ci);
+    expect(ctx).toContain("Build/Test/Lint/Typecheck failures detected");
+    expect(ctx).toContain(typecheckErrorMessage);
+  });
+
+  it("summarizes typecheck failure in the CI comment summary", () => {
+    const ci = {
+      ...defaultCiStatus(),
+      lastCheck: "2026-02-03T00:00:00.000Z",
+      passed: false,
+      buildStatus: "success" as const,
+      testStatus: "success" as const,
+      lintStatus: "success" as const,
+      typecheckStatus: "failed" as const,
+      typecheckError: "Type-checker barfed",
+    };
+    const summary = generateCiCommentSummary(ci);
+    expect(summary).toContain("typecheck");
+    expect(summary).toContain("failed");
+    expect(summary).toContain("Type-checker barfed");
+  });
+
+  it("includes the typecheck error in the blocked comment body", () => {
+    const ci = {
+      ...defaultCiStatus(),
+      lastCheck: "2026-02-04T00:00:00.000Z",
+      passed: false,
+      typecheckStatus: "failed" as const,
+      typecheckError: "TypeScript compile failed",
+    };
+    const body = generateCiBlockedComment(12, ci);
+    expect(body).toContain("typecheck");
+    expect(body).toContain("TypeScript compile failed");
+  });
 });
 
 // ── CI Status Tracking (spec: CI-gating/spec.md — CI Health Tracking) ────────
 
 describe("deriveCiStatus — spec: CI Status Tracking", () => {
+  const typecheck = { success: true, output: "typecheck ok" };
   it("stores all three check outcomes in the CiStatus object (spec: CI health tracking)", () => {
     const { status } = deriveCiStatus(
       { success: true, output: "build ok" },
       { success: true, output: "484 tests passed" },
       { success: true, output: "" },
+      typecheck,
       "2026-02-01T00:00:00.000Z",
     );
     expect(status.buildStatus).toBe("success");
@@ -120,6 +189,7 @@ describe("deriveCiStatus — spec: CI Status Tracking", () => {
       { success: true, output: "build ok" },
       { success: false, output: "2 tests failed" },
       { success: true, output: "" },
+      typecheck,
     );
     expect(status.testStatus).toBe("failed");
     expect(status.passed).toBe(false);
@@ -131,6 +201,7 @@ describe("deriveCiStatus — spec: CI Status Tracking", () => {
       { success: true, output: "build ok" },
       { success: true, output: "tests pass" },
       { success: false, output: "3 errors" },
+      typecheck,
     );
     expect(status.lintStatus).toBe("failed");
     expect(status.passed).toBe(false);
@@ -142,6 +213,7 @@ describe("deriveCiStatus — spec: CI Status Tracking", () => {
       { success: false, output: "build error: TypeScript compile failed" },
       { success: true, output: "" },
       { success: true, output: "" },
+      typecheck,
       "2026-03-01T12:00:00.000Z",
     );
     // Verify all required fields from the CI-gating spec schema are present

@@ -177,6 +177,7 @@ describe("deriveFallbackFitnessScores", () => {
     test: makeCommandResult({ output: "Tests 3 passed" }),
     lint: makeCommandResult({ output: "" }),
     audit: makeCommandResult({ output: "found 0 vulnerabilities" }),
+    typecheck: makeCommandResult({ output: "Typecheck succeeded" }),
   });
 
   it("returns meaningful scores when CI passes with no warnings", () => {
@@ -268,6 +269,19 @@ describe("deriveFallbackFitnessScores", () => {
       }),
     });
     expect(vulnerable.codeQuality).toBeLessThan(baseline.codeQuality);
+  });
+
+  it("punishes buildHealth when typecheck fails even though other stages pass", () => {
+    const base = deriveFallbackFitnessScores(createBaseResults());
+    const degraded = deriveFallbackFitnessScores({
+      ...createBaseResults(),
+      typecheck: makeCommandResult({
+        success: false,
+        output: "typecheck failed: error TS2345",
+      }),
+    });
+    expect(degraded.buildHealth).toBe(20);
+    expect(degraded.aggregate).toBeLessThan(base.aggregate);
   });
 });
 

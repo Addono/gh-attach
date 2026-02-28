@@ -154,3 +154,82 @@ describe("configCommand unit tests", () => {
     });
   });
 });
+
+describe("spec compliance — Config Command (CLI/spec.md)", () => {
+  let origConfigEnv: string | undefined;
+  let testConfigPath: string;
+  let consoleSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    origConfigEnv = process.env.GH_ATTACH_CONFIG;
+    testConfigPath = join(tmpdir(), `gh-attach-config-spec-${Date.now()}.json`);
+    process.env.GH_ATTACH_CONFIG = testConfigPath;
+    consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleSpy.mockRestore();
+    if (origConfigEnv !== undefined) {
+      process.env.GH_ATTACH_CONFIG = origConfigEnv;
+    } else {
+      delete process.env.GH_ATTACH_CONFIG;
+    }
+    try {
+      unlinkSync(testConfigPath);
+    } catch {
+      // Ignore cleanup
+    }
+  });
+
+  it("config list prints all key-value pairs (spec: Config Command — View config)", async () => {
+    writeFileSync(
+      testConfigPath,
+      JSON.stringify({
+        "strategy-order": ["release-asset", "browser-session"],
+        "default-target": "owner/repo",
+      }),
+    );
+    await configCommand("list");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "strategy-order: release-asset, browser-session",
+    );
+    expect(consoleSpy).toHaveBeenCalledWith("default-target: owner/repo");
+  });
+
+  it("config set strategy-order stores as array (spec: Config Command — Set strategy order)", async () => {
+    await configCommand(
+      "set",
+      "strategy-order",
+      "release-asset,browser-session",
+    );
+    const config = JSON.parse(readFileSync(testConfigPath, "utf-8"));
+    expect(config["strategy-order"]).toEqual([
+      "release-asset",
+      "browser-session",
+    ]);
+  });
+
+  it("config set default-target stores the default repo (spec: Config Command — Set default target)", async () => {
+    await configCommand("set", "default-target", "myowner/myrepo");
+    const config = JSON.parse(readFileSync(testConfigPath, "utf-8"));
+    expect(config["default-target"]).toBe("myowner/myrepo");
+  });
+
+  it("config file is stored at GH_ATTACH_CONFIG path when set (spec: Config Command — Config file location)", async () => {
+    await configCommand("set", "some-key", "some-value");
+    expect(readFileSync(testConfigPath, "utf-8")).toContain("some-key");
+  });
+
+  it("respects GH_ATTACH_CONFIG env override for XDG compliance (spec: Config Command — Config file location)", () => {
+    const customPath = join(tmpdir(), `xdg-test-${Date.now()}.json`);
+    process.env.GH_ATTACH_CONFIG = customPath;
+    const config = loadConfig(); // returns empty when file missing
+    expect(config).toEqual({});
+    // Cleanup
+    try {
+      unlinkSync(customPath);
+    } catch {
+      /* ignore */
+    }
+  });
+});
