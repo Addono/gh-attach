@@ -1,0 +1,18 @@
+# CODEOWNERS — defines required reviewers for pull requests.
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: all changes require review from a repository owner
+* @owner
+
+# CI/CD configuration
+.github/                   @owner
+.releaserc.json            @owner
+
+# Core library
+src/core/                  @owner
+
+# CLI
+src/cli/                   @owner
+
+# MCP server
+src/mcp/                   @owner

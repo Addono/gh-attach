@@ -307,6 +307,62 @@ async function collectSpecFiles(): Promise<string> {
   return specs.join("\n");
 }
 
+/**
+ * Collect key source-file evidence to help the evaluator ground scores in observable facts.
+ * Returns a structured summary of the repository's CI/CD, test, and release configuration.
+ */
+async function collectSourceEvidence(): Promise<string> {
+  const evidence: string[] = [];
+
+  // Helper: safely read a file slice for evidence
+  const readSlice = async (path: string, maxChars = 1500): Promise<string> => {
+    try {
+      const content = await readFile(path, "utf-8");
+      return content.length > maxChars
+        ? content.slice(0, maxChars) + `\n... (truncated, total ${content.length} chars)`
+        : content;
+    } catch {
+      return "(file not found)";
+    }
+  };
+
+  // CI/CD workflow files
+  const ciWorkflow = await readSlice(".github/workflows/ci.yml");
+  evidence.push(`=== .github/workflows/ci.yml ===\n${ciWorkflow}`);
+
+  const releaseWorkflow = await readSlice(".github/workflows/release.yml");
+  evidence.push(`=== .github/workflows/release.yml ===\n${releaseWorkflow}`);
+
+  // Semantic release configuration
+  const releasercExists = existsSync(".releaserc.json");
+  const releaserc = releasercExists ? await readSlice(".releaserc.json") : "(not found)";
+  evidence.push(`=== .releaserc.json ===\n${releaserc}`);
+
+  // Dependabot configuration
+  const dependabot = await readSlice(".github/dependabot.yml");
+  evidence.push(`=== .github/dependabot.yml ===\n${dependabot}`);
+
+  // E2E test file structure
+  const e2eTest = await readSlice("test/e2e/upload.test.ts", 2000);
+  evidence.push(`=== test/e2e/upload.test.ts ===\n${e2eTest}`);
+
+  // Graceful shutdown module
+  const shutdownModule = await readSlice("src/ralph/shutdown.ts");
+  evidence.push(`=== src/ralph/shutdown.ts ===\n${shutdownModule}`);
+
+  // Key directory listings
+  const srcListing = runCommand("find src/ -name '*.ts' | sort 2>&1");
+  evidence.push(`=== src/ file listing ===\n${srcListing.output}`);
+
+  const testListing = runCommand("find test/ -name '*.ts' | sort 2>&1");
+  evidence.push(`=== test/ file listing ===\n${testListing.output}`);
+
+  const githubListing = runCommand("find .github/ -type f | sort 2>&1");
+  evidence.push(`=== .github/ file listing ===\n${githubListing.output}`);
+
+  return evidence.join("\n\n");
+}
+
 async function evaluateFitness(
   client: CopilotClient,
   config: RalphConfig,
@@ -316,6 +372,7 @@ async function evaluateFitness(
   log(`Starting fitness evaluation at iteration ${iteration}`, "EVAL");
 
   const specs = await collectSpecFiles();
+  const sourceEvidence = await collectSourceEvidence();
   const buildResult = runCommand("npm run build 2>&1");
   const testResult = runCommand("npm test 2>&1");
   const lintResult = runCommand("npm run lint 2>&1");
@@ -330,7 +387,7 @@ Your job is to score the implementation against the OpenSpec specifications belo
 2. For EACH requirement/scenario produce a checklist entry with:
    - "requirement": short name such as "Ralph Loop Core – Loop execution"
    - "score": integer 0-100
-   - "reasoning": 1-3 sentences of EVIDENCE referencing the build/test/lint output or specific behaviour observed. When score < 80, state explicitly what is missing or broken.
+   - "reasoning": 1-3 sentences of EVIDENCE referencing the build/test/lint output, source evidence below, or specific behaviour observed. When score < 80, state explicitly what is missing or broken.
 3. Do NOT bundle multiple requirements into one entry.
 4. When scoring, REWARD dependency freshness:
    - If npm audit shows 0 vulnerabilities, add +5 bonus points to code quality
@@ -346,6 +403,9 @@ Your job is to score the implementation against the OpenSpec specifications belo
 
 ## Specifications
 ${specs}
+
+## Source Evidence (key configuration and implementation files)
+${sourceEvidence}
 
 ## Build Output (${buildResult.success ? "SUCCESS" : "FAILED"})
 ${buildResult.output}
