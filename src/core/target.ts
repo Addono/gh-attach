@@ -23,10 +23,10 @@ export function parseTarget(
   );
   if (urlMatch) {
     return {
-      owner: urlMatch[1]!,
-      repo: urlMatch[2]!,
+      owner: urlMatch[1] || "",
+      repo: urlMatch[2] || "",
       type: urlMatch[3] === "pull" ? "pull" : "issue",
-      number: parseInt(urlMatch[4]!, 10),
+      number: parseInt(urlMatch[4] || "0", 10),
     };
   }
 
@@ -34,10 +34,10 @@ export function parseTarget(
   const shorthandMatch = target.match(/^([^/]+)\/([^#]+)#(pull\/)?(\d+)$/);
   if (shorthandMatch) {
     return {
-      owner: shorthandMatch[1]!,
-      repo: shorthandMatch[2]!,
+      owner: shorthandMatch[1] || "",
+      repo: shorthandMatch[2] || "",
       type: shorthandMatch[3] ? "pull" : "issue",
-      number: parseInt(shorthandMatch[4]!, 10),
+      number: parseInt(shorthandMatch[4] || "0", 10),
     };
   }
 
@@ -49,7 +49,7 @@ export function parseTarget(
       owner,
       repo,
       type: localRefMatch[1] ? "pull" : "issue",
-      number: parseInt(localRefMatch[2]!, 10),
+      number: parseInt(localRefMatch[2] || "0", 10),
     };
   }
 
@@ -77,14 +77,14 @@ function getGitRemote(): [string, string] {
       /git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/,
     );
     if (sshMatch) {
-      return [sshMatch[1]!, sshMatch[2]!];
+      return [sshMatch[1] || "", sshMatch[2] || ""];
     }
 
     const httpsMatch = remoteUrl.match(
       /https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/,
     );
     if (httpsMatch) {
-      return [httpsMatch[1]!, httpsMatch[2]!];
+      return [httpsMatch[1] || "", httpsMatch[2] || ""];
     }
 
     throw new Error("Could not parse git remote URL");
