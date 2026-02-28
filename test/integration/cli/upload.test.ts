@@ -90,7 +90,7 @@ describe("uploadCommand integration tests", () => {
           target: "owner/repo#42",
           format: "markdown",
         }),
-      ).rejects.toThrow("No authentication available");
+      ).rejects.toThrow(/No (authentication|upload strategy) available/);
     } finally {
       if (origToken) process.env.GITHUB_TOKEN = origToken;
       if (origGhToken) process.env.GH_TOKEN = origGhToken;

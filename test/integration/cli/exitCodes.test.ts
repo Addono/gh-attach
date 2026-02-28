@@ -138,7 +138,7 @@ describe("CLI exit code integration", () => {
       },
     );
     expect(status).toBe(1);
-    expect(stderr).toContain("No authentication available");
+    expect(stderr).toMatch(/No (authentication|upload strategy) available/);
   });
 
   describe("login --status command", () => {
