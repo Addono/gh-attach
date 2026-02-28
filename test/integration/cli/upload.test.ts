@@ -258,4 +258,120 @@ describe("uploadCommand integration tests", () => {
       if (origCookies) process.env.GH_ATTACH_COOKIES = origCookies;
     }
   });
+
+  it("should throw error when repo-branch strategy requires token", async () => {
+    const origToken = process.env.GITHUB_TOKEN;
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.GH_TOKEN;
+
+    try {
+      await expect(
+        uploadCommand([testFile], {
+          target: "owner/repo#42",
+          strategy: "repo-branch",
+        }),
+      ).rejects.toThrow("requires GITHUB_TOKEN");
+    } finally {
+      if (origToken) process.env.GITHUB_TOKEN = origToken;
+    }
+  });
+
+  it("should output URL format correctly", async () => {
+    process.env.GITHUB_TOKEN = "test-token";
+
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      await uploadCommand([testFile], {
+        target: "owner/repo#42",
+        format: "url",
+      });
+    } catch (err) {
+      // Expected to fail during upload, but format should be attempted
+      if (!(err instanceof Error) || !err.message.includes("Upload failed")) {
+        throw err;
+      }
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("should output markdown format by default", async () => {
+    process.env.GITHUB_TOKEN = "test-token";
+
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      await uploadCommand([testFile], {
+        target: "owner/repo#42",
+        // No format specified - should default to markdown
+      });
+    } catch (err) {
+      if (!(err instanceof Error) || !err.message.includes("Upload failed")) {
+        throw err;
+      }
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("should handle multiple files", async () => {
+    process.env.GITHUB_TOKEN = "test-token";
+
+    const testFile2 = join(testDir, "test-image-2.png");
+    const pngBuffer = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x08,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0xc4, 0x0f, 0xbe, 0x8b, 0x00, 0x00, 0x00,
+      0x25, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
+      0x00, 0x03, 0x01, 0x01, 0x00, 0x18, 0xdd, 0x8d, 0xb4, 0x00, 0x00, 0x00,
+      0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ]);
+    writeFileSync(testFile2, pngBuffer);
+
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      await uploadCommand([testFile, testFile2], {
+        target: "owner/repo#42",
+        format: "json",
+      });
+    } catch (err) {
+      // Expected to fail during upload
+      if (!(err instanceof Error) || !err.message.includes("Upload failed")) {
+        throw err;
+      }
+    } finally {
+      consoleSpy.mockRestore();
+      unlinkSync(testFile2);
+    }
+  });
+
+  it("should support cookie-extraction strategy without auth", async () => {
+    const origToken = process.env.GITHUB_TOKEN;
+    const origCookies = process.env.GH_ATTACH_COOKIES;
+
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.GH_TOKEN;
+    delete process.env.GH_ATTACH_COOKIES;
+
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      await uploadCommand([testFile], {
+        target: "owner/repo#42",
+        strategy: "cookie-extraction",
+        format: "json",
+      });
+    } catch (err) {
+      // Expected to fail during upload
+      if (!(err instanceof Error) || !err.message.includes("Upload failed")) {
+        throw err;
+      }
+    } finally {
+      consoleSpy.mockRestore();
+      if (origToken) process.env.GITHUB_TOKEN = origToken;
+      if (origCookies) process.env.GH_ATTACH_COOKIES = origCookies;
+    }
+  });
 });

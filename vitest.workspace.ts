@@ -6,6 +6,21 @@ export default defineWorkspace([
       name: "unit",
       include: ["test/unit/**/*.test.ts"],
       environment: "node",
+      coverage: {
+        provider: "v8",
+        reporter: ["text", "html", "json", "lcov"],
+        include: ["src/**/*.ts"],
+        exclude: [
+          "src/**/*.d.ts",
+          "src/cli/**",
+          "src/mcp/**",
+          "src/index.ts",
+        ],
+        lines: 90,
+        functions: 90,
+        branches: 80,
+        statements: 90,
+      },
     },
   },
   {
