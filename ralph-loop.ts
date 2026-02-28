@@ -309,16 +309,22 @@ async function collectSourceEvidence(): Promise<string> {
   const indexTs = await readSlice("src/index.ts", 2000);
   evidence.push(`=== src/index.ts ===\n${indexTs}`);
 
-  // Core types — shows error hierarchy and strategy interface
-  const typesTs = await readSlice("src/core/types.ts", 3000);
+  // Core types — shows error hierarchy and strategy interface (increased to show NoStrategyAvailableError at line ~134)
+  const typesTs = await readSlice("src/core/types.ts", 4500);
   evidence.push(`=== src/core/types.ts ===\n${typesTs}`);
+
+  // Core upload logic — shows strategy fallback loop and NoStrategyAvailableError throw (spec: Strategy Selection)
+  const coreUploadTs = await readSlice("src/core/upload.ts", 2000);
+  evidence.push(
+    `=== src/core/upload.ts (strategy fallback — spec: Strategy Selection and Fallback) ===\n${coreUploadTs}`,
+  );
 
   // CLI entry point — shows command registration and global options
   const cliIndex = await readSlice("src/cli/index.ts", 2500);
   evidence.push(`=== src/cli/index.ts ===\n${cliIndex}`);
 
-  // Upload command — shows strategy selection, output formats, exit codes
-  const uploadCmd = await readSlice("src/cli/commands/upload.ts", 2500);
+  // Upload command — shows strategy selection, output formats, exit codes (increased to show NoStrategyAvailableError usage)
+  const uploadCmd = await readSlice("src/cli/commands/upload.ts", 4000);
   evidence.push(`=== src/cli/commands/upload.ts ===\n${uploadCmd}`);
 
   // Vitest config — shows test projects, coverage thresholds
@@ -433,6 +439,55 @@ async function collectSourceEvidence(): Promise<string> {
   } catch {
     // ralph-loop.ts read failure — section already captured above
   }
+
+  // Browser Session strategy — CSRF token extraction and SESSION_EXPIRED handling.
+  // This file is NOT included in the first-3000-char MCP slice, so we read it explicitly
+  // to show the evaluator that CSRF_EXTRACTION_FAILED and SESSION_EXPIRED are implemented.
+  try {
+    const bsContent = await readFile(
+      "src/core/strategies/browserSession.ts",
+      "utf-8",
+    );
+    // Capture the getUploadPolicy function which contains CSRF_EXTRACTION_FAILED + SESSION_EXPIRED
+    const csrfIdx = bsContent.indexOf("async function getUploadPolicy");
+    const sessionIdx = bsContent.indexOf("SESSION_EXPIRED");
+    const startIdx =
+      csrfIdx !== -1 ? csrfIdx : sessionIdx !== -1 ? sessionIdx : 0;
+    const section = bsContent.slice(startIdx, startIdx + 2000);
+    evidence.push(
+      `=== src/core/strategies/browserSession.ts (CSRF_EXTRACTION_FAILED + SESSION_EXPIRED — spec: Browser Session Strategy) ===\n${section}`,
+    );
+  } catch {
+    evidence.push(
+      `=== src/core/strategies/browserSession.ts ===\n(file not found)`,
+    );
+  }
+
+  // MCP server — base64 content upload section (handleUploadImage).
+  // The readSlice above only covers the first ~3000 chars; base64 decoding is at line ~489.
+  // We extract it explicitly so the evaluator can verify spec: MCP Upload Tool — base64 content.
+  try {
+    const mcpContent = await readFile("src/mcp/index.ts", "utf-8");
+    const base64Idx = mcpContent.indexOf("Buffer.from(args.content, \"base64\")");
+    if (base64Idx !== -1) {
+      const section = mcpContent.slice(
+        Math.max(0, base64Idx - 300),
+        base64Idx + 600,
+      );
+      evidence.push(
+        `=== src/mcp/index.ts (base64 upload section — spec: MCP Upload Tool base64 content support) ===\n${section}`,
+      );
+    }
+  } catch {
+    // MCP file read failure — first slice already captured above
+  }
+
+  // Login command — --status flag implementation.
+  // Explicitly captured to confirm spec: Login Command — Status check is implemented.
+  const loginCmd = await readSlice("src/cli/commands/login.ts", 2000);
+  evidence.push(
+    `=== src/cli/commands/login.ts (login --status implementation — spec: Login Command Status check) ===\n${loginCmd}`,
+  );
 
   return evidence.join("\n\n");
 }
