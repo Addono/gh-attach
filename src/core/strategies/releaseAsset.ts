@@ -288,12 +288,17 @@ async function uploadAsset(
       // Continue with original filename if we can't list assets
     }
 
+    // Octokit's type signature expects string but accepts Buffer for binary uploads
     const { data: asset } = await octokit.rest.repos.uploadReleaseAsset({
       owner: target.owner,
       repo: target.repo,
       release_id: releaseId,
       name: finalFilename,
-      data: data as unknown as string,
+      data: data.toString("base64"),
+      headers: {
+        "content-type": "application/octet-stream",
+        "content-length": data.length,
+      },
     });
 
     return asset.browser_download_url;

@@ -407,4 +407,44 @@ describe("MCP server handlers", () => {
     expect(response.isError).toBe(true);
     expect(response.content[0]?.text).toContain("Unknown tool");
   });
+
+  it("uses cookie-extraction strategy when explicitly selected", async () => {
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({
+      params: {
+        name: "upload_image",
+        arguments: {
+          filePath: "/tmp/example.png",
+          target: "octo/repo#42",
+          strategy: "cookie-extraction",
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const passedStrategies = (hoisted.mockUpload.mock.calls[0]?.[2] ??
+      []) as UploadStrategy[];
+    expect(passedStrategies.map((s) => s.name)).toEqual(["cookie-extraction"]);
+  });
+
+  it("uses repo-branch strategy when explicitly selected with token", async () => {
+    process.env.GITHUB_TOKEN = "ghs_test";
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({
+      params: {
+        name: "upload_image",
+        arguments: {
+          filePath: "/tmp/example.png",
+          target: "octo/repo#42",
+          strategy: "repo-branch",
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const passedStrategies = (hoisted.mockUpload.mock.calls[0]?.[2] ??
+      []) as UploadStrategy[];
+    expect(passedStrategies.map((s) => s.name)).toEqual(["repo-branch"]);
+  });
 });

@@ -77,9 +77,31 @@ gh-attach mcp --transport http --port 3000
 gh-attach config set strategy-order "release-asset,browser-session"
 gh-attach config set default-target owner/repo
 gh-attach config list
+gh-attach config get default-target
 ```
 
-Config is stored at `~/.config/gh-attach/config.json` (overridable via `GH_ATTACH_CONFIG`).
+Config is stored at `~/.config/gh-attach/config.json` (overridable via `GH_ATTACH_CONFIG` or `XDG_CONFIG_HOME`).
+
+## Environment Variables
+
+| Variable                    | Description                                                   |
+| --------------------------- | ------------------------------------------------------------- |
+| `GITHUB_TOKEN` / `GH_TOKEN` | GitHub API token for release-asset and repo-branch strategies |
+| `GH_ATTACH_COOKIES`         | Session cookies for browser-session strategy                  |
+| `GH_ATTACH_STRATEGY`        | Override default strategy selection                           |
+| `GH_ATTACH_STATE_PATH`      | Override session state file location                          |
+| `GH_ATTACH_CONFIG`          | Override config file location                                 |
+| `NO_COLOR`                  | Disable ANSI color codes in output                            |
+
+## Exit Codes
+
+| Code | Meaning                      |
+| ---- | ---------------------------- |
+| `0`  | Success                      |
+| `1`  | General error                |
+| `2`  | Authentication error         |
+| `3`  | Validation error (bad input) |
+| `4`  | Network/upload error         |
 
 ## Development
 

@@ -24,11 +24,12 @@ global.FormData = class FormData {
   }
 } as unknown as typeof FormData;
 
-// Mock fs.createReadStream
+// Mock fs.readFileSync (used by uploadToS3 to read file as Buffer)
 vi.mock("fs", async (importOriginal) => {
   const original = await importOriginal<typeof import("fs")>();
   return {
     ...original,
+    readFileSync: vi.fn(() => Buffer.from("fake-image-data")),
     createReadStream: vi.fn(() => ({
       pipe: vi.fn(),
       on: vi.fn(),

@@ -1,5 +1,5 @@
-import { createReadStream } from "fs";
 import { basename } from "path";
+import { readFileSync } from "fs";
 import { AuthenticationError, UploadError } from "../types.js";
 import type { UploadResult, UploadStrategy, UploadTarget } from "../types.js";
 
@@ -192,7 +192,8 @@ async function uploadToS3(
   filePath: string,
 ): Promise<void> {
   try {
-    const file = createReadStream(filePath);
+    const fileBuffer = readFileSync(filePath);
+    const fileBlob = new Blob([fileBuffer]);
     const form = new FormData();
 
     // Add form fields
@@ -200,9 +201,8 @@ async function uploadToS3(
       form.append(key, value);
     }
 
-    // Add file
-    // FormData.append accepts File, Blob, or Uint8Array
-    form.append("file", file as unknown as Blob);
+    // Add file as Blob (avoids unsafe type cast of ReadStream)
+    form.append("file", fileBlob);
 
     const response = await fetch(uploadUrl, {
       method: "POST",

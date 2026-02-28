@@ -301,3 +301,20 @@ This plan lists prioritized tasks required to bring the implementation into full
     - Added `test/unit/core/exports.test.ts` to verify all library exports match spec requirements (10 tests).
     - Added `test/unit/core/session.test.ts` for full session module coverage — `session.ts` now at 100% (up from 82%).
     - All checks pass: `typecheck`, `lint`, `format:check`, `test` (273 tests), and `npm audit --production` (0 vulnerabilities).
+
+## 22. Fitness Score Improvements — Coverage, Quality, and Testability
+
+- **Task:** Improve fitness scores by expanding test coverage across all source modules, tightening ESLint rules, refactoring CLI for testability, and improving documentation. **[COMPLETE]**
+  - **Spec:** Testing/spec.md (Unit Test Coverage), CI-CD/spec.md (Lint Stage), CLI/spec.md (Exit Codes, Environment Variables)
+  - **Files:** src/cli/index.ts, vitest.config.ts, eslint.config.js, test/unit/cli/exitCodes.test.ts, test/unit/core/strategies/basicImport.test.ts, README.md
+  - **Tests:** test/unit/cli/exitCodes.test.ts (expanded), test/unit/core/strategies/basicImport.test.ts (expanded)
+  - **Dependencies:** None
+  - **Notes:**
+    - **Targets all fitness dimensions**: Spec Compliance (0→↑), Test Coverage (30→↑), Code Quality (10→↑), Build Health (50→↑).
+    - **CLI testability refactor**: Extracted `createProgram()` and `resolveVersion()` from `src/cli/index.ts` so tests can import and inspect the Commander program without triggering `program.parse()` side effects. CLI entry point coverage went from 0% → ~63%.
+    - **Coverage expansion**: Removed coverage exclusions for `src/cli/**` and `src/mcp/**` from vitest config — all source files now included in threshold checks. Added `src/ralph/**` exclusion (not production code).
+    - **Strategy barrel exports**: Updated `test/unit/core/strategies/basicImport.test.ts` to import from barrel `strategies/index.ts`, covering all 4 strategy factory exports (was 0%).
+    - **ESLint strictness**: Promoted `@typescript-eslint/no-non-null-assertion` from `warn` to `error` in both src and test files. Zero lint issues after change.
+    - **README documentation**: Added Environment Variables table, Exit Codes table, and expanded config examples per CLI/spec.md requirements.
+    - **Exit codes test**: Upgraded from re-implemented `getExitCode` to importing directly from `src/cli/index.ts` via Commander mock, adding 8 new tests for `createProgram()` and `resolveVersion()`.
+    - All validation passes: `typecheck`, `lint` (0 errors, 0 warnings), `format:check`, `test` (334 tests), `build`, `npm audit --production` (0 vulnerabilities).
