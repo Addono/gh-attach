@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { chromium } from "playwright";
+import { debug, info } from "../output.js";
 
 interface SessionData {
   cookies?: string;
@@ -63,6 +64,8 @@ interface LoginOptions {
  * Login command implementation.
  */
 export async function loginCommand(options: LoginOptions) {
+  debug(`Running login command (status=${options.status ? "true" : "false"})`);
+
   if (options.status) {
     // Check current auth status
     const session = loadSession();
@@ -84,8 +87,8 @@ export async function loginCommand(options: LoginOptions) {
     }
   } else {
     // Interactive browser login using Playwright
-    console.log("Opening browser for GitHub authentication...");
-    console.log("Please log in to GitHub in the browser window that opens.");
+    info("Opening browser for GitHub authentication...");
+    info("Please log in to GitHub in the browser window that opens.");
 
     const browser = await chromium.launch({ headless: false });
     const context = await browser.newContext();

@@ -32,6 +32,10 @@ Upload images to GitHub issues, PRs, and comments
 
 Options:
   -V, --version                  output the version number
+  -v, --verbose                  Print debug information to stderr
+  -q, --quiet                    Suppress all output except the final result or
+                                 errors
+  --no-color                     Disable ANSI color codes in output
   -h, --help                     display help for command
 
 Commands:

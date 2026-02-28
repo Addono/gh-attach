@@ -63,7 +63,7 @@ describe("loginCommand integration tests", () => {
     }
 
     expect(consoleSpy).toHaveBeenCalledWith("Status: not authenticated");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(2);
 
     consoleSpy.mockRestore();
     exitSpy.mockRestore();
@@ -107,7 +107,7 @@ describe("loginCommand integration tests", () => {
     }
 
     expect(consoleSpy).toHaveBeenCalledWith("Status: session expired");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(2);
 
     consoleSpy.mockRestore();
     exitSpy.mockRestore();

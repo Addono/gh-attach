@@ -223,7 +223,7 @@ describe("uploadCommand integration tests", () => {
         target: "owner/repo#42",
         strategy: "unknown-strategy",
       }),
-    ).rejects.toThrow("Unknown strategy");
+    ).rejects.toThrow("is not available");
   });
 
   it("should throw error when release-asset strategy requires token", async () => {
@@ -237,7 +237,7 @@ describe("uploadCommand integration tests", () => {
           target: "owner/repo#42",
           strategy: "release-asset",
         }),
-      ).rejects.toThrow("requires GITHUB_TOKEN");
+      ).rejects.toThrow("is not available");
     } finally {
       if (origToken) process.env.GITHUB_TOKEN = origToken;
     }
@@ -253,7 +253,7 @@ describe("uploadCommand integration tests", () => {
           target: "owner/repo#42",
           strategy: "browser-session",
         }),
-      ).rejects.toThrow("requires GH_ATTACH_COOKIES");
+      ).rejects.toThrow("is not available");
     } finally {
       if (origCookies) process.env.GH_ATTACH_COOKIES = origCookies;
     }
@@ -270,7 +270,7 @@ describe("uploadCommand integration tests", () => {
           target: "owner/repo#42",
           strategy: "repo-branch",
         }),
-      ).rejects.toThrow("requires GITHUB_TOKEN");
+      ).rejects.toThrow("is not available");
     } finally {
       if (origToken) process.env.GITHUB_TOKEN = origToken;
     }

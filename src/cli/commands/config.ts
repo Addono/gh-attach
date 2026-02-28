@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { debug } from "../output.js";
 
 export interface Config {
   [key: string]: string | string[];
@@ -53,6 +54,7 @@ export async function configCommand(
   key?: string,
   value?: string,
 ) {
+  debug(`Running config command action: ${action}`);
   const config = loadConfig();
 
   switch (action) {

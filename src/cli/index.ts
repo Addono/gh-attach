@@ -11,38 +11,9 @@ import {
   ValidationError,
   UploadError,
 } from "../core/types.js";
-
-/**
- * Global CLI options that apply to all commands.
- */
-export interface GlobalOptions {
-  verbose?: boolean;
-  quiet?: boolean;
-  noColor?: boolean;
-}
-
-/**
- * Global state for CLI options.
- */
-export const globalOptions: GlobalOptions = {};
-
-/**
- * Log debug information (only in verbose mode).
- */
-export function debug(message: string): void {
-  if (globalOptions.verbose && !globalOptions.quiet) {
-    console.error(`[debug] ${message}`);
-  }
-}
-
-/**
- * Log informational message (suppressed in quiet mode).
- */
-export function info(message: string): void {
-  if (!globalOptions.quiet) {
-    console.log(message);
-  }
-}
+import { globalOptions } from "./output.js";
+export { debug, info } from "./output.js";
+export type { GlobalOptions } from "./output.js";
 
 /**
  * Exit codes per CLI specification:
@@ -67,7 +38,11 @@ function getExitCode(err: unknown): number {
 
 // Get package.json from the project root (works in both src and dist)
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const pkgPath = resolve(__dirname, "..", "package.json");
+const pkgPath = resolve(
+  __dirname,
+  __dirname.endsWith("/src/cli") ? "../.." : "..",
+  "package.json",
+);
 const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version: string };
 
 const program = new Command();

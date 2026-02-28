@@ -9,7 +9,7 @@ import { parseTarget } from "../../core/target.js";
 import { validateFile } from "../../core/validation.js";
 import { upload } from "../../core/upload.js";
 import { loadConfig } from "./config.js";
-import { debug } from "../index.js";
+import { debug } from "../output.js";
 import type { UploadStrategy } from "../../core/types.js";
 
 interface UploadOptions {
