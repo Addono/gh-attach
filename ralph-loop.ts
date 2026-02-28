@@ -87,8 +87,17 @@ async function saveState(state: RalphState): Promise<void> {
   await writeFile(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
-function log(message: string): void {
-  const entry = `[${new Date().toISOString()}] ${message}\n`;
+type LogLevel = "INFO" | "DEBUG" | "WARN" | "ERROR" | "EVAL" | "GITHUB" | "ITER" | "MODEL";
+
+function log(message: string, level: LogLevel = "INFO"): void {
+  const lines = message.split("\n");
+  const first = `[${new Date().toISOString()}] [${level}] ${lines[0]}\n`;
+  const rest = lines
+    .slice(1)
+    .filter((l) => l.trim() !== "")
+    .map((l) => `  | ${l}\n`)
+    .join("");
+  const entry = first + rest;
   process.stdout.write(entry);
   try {
     execSync(`printf '%b' ${JSON.stringify(entry)} >> ${LOG_FILE}`);
@@ -122,6 +131,7 @@ function selectModel(
           ]!;
         log(
           `Stall detected (Δ${best - worst} < ${config.stallThreshold} over ${config.stallWindow} evals) → escalating to premium: ${chosen}`,
+          "MODEL",
         );
         return chosen;
       }
@@ -155,9 +165,13 @@ function runCommand(cmd: string): { success: boolean; output: string } {
 
 async function collectSpecFiles(): Promise<string> {
   const specs: string[] = [];
-  const specDirs = ["core", "cli", "mcp", "testing", "ci-cd", "ralph-loop"];
-  for (const dir of specDirs) {
-    const path = `openspec/specs/${dir}/spec.md`;
+  // Scan all subdirectories under openspec/specs/ automatically
+  const baseDir = "openspec/specs";
+  const possibleDirs = [
+    "core", "cli", "mcp", "testing", "ci-cd", "ralph-loop", "logging", "ci-gating",
+  ];
+  for (const dir of possibleDirs) {
+    const path = `${baseDir}/${dir}/spec.md`;
     if (existsSync(path)) {
       const content = await readFile(path, "utf-8");
       specs.push(`\n=== ${dir}/spec.md ===\n${content}`);
@@ -172,7 +186,7 @@ async function evaluateFitness(
   iteration: number,
   model: string,
 ): Promise<FitnessScores> {
-  log(`Starting fitness evaluation at iteration ${iteration}`);
+  log(`Starting fitness evaluation at iteration ${iteration}`, "EVAL");
 
   const specs = await collectSpecFiles();
   const buildResult = runCommand("npm run build 2>&1");
@@ -263,9 +277,9 @@ Respond with ONLY a valid JSON object — no markdown, no code fences, no extra 
           : [],
       };
     }
-    log(`Fitness evaluation: could not extract JSON from response (len=${raw.length})`);
+    log(`Fitness evaluation: could not extract JSON from response (len=${raw.length})`, "WARN");
   } catch (err) {
-    log(`Fitness evaluation error: ${err}`);
+    log(`Fitness evaluation error: ${err}`, "ERROR");
   } finally {
     await session.destroy();
   }
@@ -396,9 +410,9 @@ function ghWithBodyFile(cmd: string, body: string, retry = false): void {
 function tryGitPush(): void {
   try {
     execSync("git push", { encoding: "utf-8", timeout: 30_000 });
-    log("Pushed to remote");
+    log("Pushed to remote", "INFO");
   } catch (err) {
-    log(`Git push skipped/failed (non-fatal): ${err}`);
+    log(`Git push skipped/failed (non-fatal): ${err}`, "WARN");
   }
 }
 
@@ -413,7 +427,7 @@ function ghExecWithRetry(
       return;
     } catch (err) {
       if (attempt === maxAttempts) throw err;
-      log(`  gh command failed (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs}ms…`);
+      log(`gh command failed (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs}ms…`, "WARN");
       // Synchronous sleep via a busy-wait — acceptable for a cli tool
       const end = Date.now() + delayMs;
       while (Date.now() < end) { /* spin */ }
@@ -429,7 +443,7 @@ async function postToGitHub(
   model: string,
 ): Promise<void> {
   if (!config.trackingRepo) {
-    log("No trackingRepo configured, skipping GitHub posting");
+    log("No trackingRepo configured, skipping GitHub posting", "WARN");
     return;
   }
 
@@ -444,7 +458,7 @@ async function postToGitHub(
       const match = result.match(/\/issues\/(\d+)/);
       if (match) {
         state.trackingIssueNumber = parseInt(match[1]!, 10);
-        log(`Created tracking issue #${state.trackingIssueNumber}`);
+        log(`Created tracking issue #${state.trackingIssueNumber}`, "GITHUB");
       }
     }
 
@@ -465,11 +479,69 @@ async function postToGitHub(
         true,
       );
 
-      log(`Posted fitness score to issue #${state.trackingIssueNumber}`);
+      log(`Posted evaluation comment to issue #${state.trackingIssueNumber} (${scores.checklist.length} checklist items)`, "GITHUB");
     }
   } catch (err) {
-    log(`Failed to post to GitHub: ${err}`);
+    log(`Failed to post to GitHub: ${err}`, "ERROR");
   }
+}
+
+// --- Score-maximising improvement context ---
+
+/**
+ * Builds a section injected into every prompt that directs the agent towards
+ * the areas where the last evaluation scored lowest. Items are sorted ascending
+ * by score so the worst regressions appear first.
+ */
+function generateImprovementContext(evaluations: Evaluation[]): string {
+  if (evaluations.length === 0) return "";
+
+  const last = evaluations[evaluations.length - 1]!;
+  const { scores, iteration } = last;
+
+  // Pull out the bottom checklist items (score < 80, worst first)
+  const weak = [...(scores.checklist ?? [])]
+    .filter((c) => c.score < 80)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 10);
+
+  const dimensionSummary = [
+    `  - Spec Compliance:  ${scores.specCompliance}/100`,
+    `  - Test Coverage:    ${scores.testCoverage}/100`,
+    `  - Code Quality:     ${scores.codeQuality}/100`,
+    `  - Build Health:     ${scores.buildHealth}/100`,
+    `  - Aggregate:        ${scores.aggregate}/100`,
+  ].join("\n");
+
+  const weakRows =
+    weak.length > 0
+      ? weak
+          .map(
+            (c) =>
+              `  [${c.score}/100] ${c.requirement}\n          → ${c.reasoning}`,
+          )
+          .join("\n")
+      : "  (all items scored ≥ 80 — no urgent regressions)";
+
+  return `
+## 🎯 Score-Maximisation Context (from Iteration ${iteration} evaluation)
+
+Your PRIMARY GOAL this iteration is to increase the aggregate fitness score above ${scores.aggregate}/100.
+
+### Last Evaluation Scores
+${dimensionSummary}
+
+### Lowest-Scoring Items — Fix These First
+${weakRows}
+
+### Instructions
+- Do NOT do arbitrary feature work. Pick the task from IMPLEMENTATION_PLAN.md that most
+  directly addresses one of the low-scoring items above.
+- For each fix, state which checklist item you are targeting and why your change will
+  improve that specific score.
+- After implementing, run the full validation suite to confirm improvement.
+- If all items score ≥ 80, you may proceed with the next highest-priority feature task.
+`;
 }
 
 // --- Main loop ---
@@ -480,8 +552,23 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
   const maxIterations = maxIterationsOverride ?? config.maxIterations;
   const promptFile = mode === "plan" ? "PROMPT_plan.md" : "PROMPT_build.md";
 
-  log(`Starting Ralph Loop: mode=${mode}, max=${maxIterations}`);
-  log(`Model pool: ${config.models.join(", ")}`);
+  log(`Starting Ralph Loop: mode=${mode}, max=${maxIterations}`, "INFO");
+  log(`Model pool (regular): ${config.models.join(", ")}`, "INFO");
+  log(`Model pool (premium): ${config.premiumModels.join(", ")}`, "INFO");
+
+  if (state.currentIteration > 0) {
+    log(
+      `Resuming from iteration ${state.currentIteration} (model: ${state.currentModel}, ${state.evaluations.length} prior evaluations)`,
+      "INFO",
+    );
+    if (state.evaluations.length > 0) {
+      const last = state.evaluations[state.evaluations.length - 1]!;
+      log(
+        `Last evaluation: iteration ${last.iteration}, aggregate=${last.scores.aggregate}/100 — ${last.scores.notes}`,
+        "INFO",
+      );
+    }
+  }
 
   const client = new CopilotClient();
   await client.start();
@@ -489,6 +576,7 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
   // Select initial model
   if (!state.currentModel) {
     state.currentModel = selectModel(state.evaluations, config, "");
+    log(`Initial model selected: ${state.currentModel}`, "MODEL");
   }
 
   // Graceful shutdown
@@ -496,31 +584,50 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
   process.on("SIGINT", () => {
     if (shuttingDown) process.exit(1);
     shuttingDown = true;
-    log("SIGINT received, finishing current iteration...");
+    log("SIGINT received, finishing current iteration…", "WARN");
     setTimeout(() => {
-      log("Grace period expired, saving state and exiting");
+      log("Grace period expired, saving state and exiting", "WARN");
       saveState(state).then(() => process.exit(0));
     }, 5000);
   });
 
   try {
-    const prompt = await readFile(promptFile, "utf-8");
+    const basePrompt = await readFile(promptFile, "utf-8");
 
     const startIteration = state.currentIteration + 1;
     const endIteration = state.currentIteration + maxIterations;
     for (let i = startIteration; i <= endIteration; i++) {
       if (shuttingDown) break;
 
-      log(`\n=== Iteration ${i} | Model: ${state.currentModel} ===`);
+      const improvementContext = generateImprovementContext(state.evaluations);
+      const prompt = improvementContext
+        ? `${basePrompt}\n${improvementContext}`
+        : basePrompt;
+
+      const lastEval = state.evaluations[state.evaluations.length - 1];
+      const scoreHint = lastEval
+        ? ` | Last score: ${lastEval.scores.aggregate}/100`
+        : "";
+      log(`=== Iteration ${i} | Model: ${state.currentModel}${scoreHint} ===`, "ITER");
+      if (lastEval && lastEval.scores.checklist.length > 0) {
+        const worstItem = [...lastEval.scores.checklist].sort((a, b) => a.score - b.score)[0]!;
+        log(`Target this iteration: [${worstItem.score}/100] ${worstItem.requirement}`, "ITER");
+      }
 
       const session = await client.createSession({
         model: state.currentModel,
         onPermissionRequest: approveAll,
       });
 
+      const toolCounts: Record<string, number> = {};
       session.on((event: SessionEvent) => {
         if (event.type === "tool.execution_start") {
-          log(`  ⚙ ${event.data.toolName}`);
+          const name = event.data.toolName;
+          toolCounts[name] = (toolCounts[name] ?? 0) + 1;
+          const input = event.data.toolInput
+            ? JSON.stringify(event.data.toolInput).slice(0, 120)
+            : "";
+          log(`  ⚙ ${name}${input ? ` — ${input}` : ""}`, "DEBUG");
         }
       });
 
@@ -528,13 +635,17 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
       try {
         await session.sendAndWait({ prompt }, config.timeout);
       } catch (err) {
-        log(`Iteration ${i} error: ${err}`);
+        log(`Iteration ${i} error: ${err}`, "ERROR");
       } finally {
         await session.destroy();
       }
 
       const elapsed = Math.round((Date.now() - startTime) / 1000);
-      log(`Iteration ${i} complete (${elapsed}s)`);
+      const toolSummary = Object.entries(toolCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([t, n]) => `${t}×${n}`)
+        .join(", ");
+      log(`Iteration ${i} complete in ${elapsed}s | Tools used: ${toolSummary || "none"}`, "ITER");
 
       state.currentIteration = i;
 
@@ -547,6 +658,12 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
           state.currentModel,
         );
 
+        const prevEval = state.evaluations[state.evaluations.length - 1];
+        const delta = prevEval
+          ? scores.aggregate - prevEval.scores.aggregate
+          : null;
+        const deltaStr = delta !== null ? ` (${delta >= 0 ? "+" : ""}${delta} vs prev)` : "";
+
         const evaluation: Evaluation = {
           iteration: i,
           model: state.currentModel,
@@ -556,8 +673,22 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
         state.evaluations.push(evaluation);
 
         log(
-          `Fitness: aggregate=${scores.aggregate}/100 (spec=${scores.specCompliance}, tests=${scores.testCoverage}, quality=${scores.codeQuality}, build=${scores.buildHealth})`,
+          `Scores: aggregate=${scores.aggregate}/100${deltaStr}\n` +
+          `  spec=${scores.specCompliance}/100  tests=${scores.testCoverage}/100  ` +
+          `quality=${scores.codeQuality}/100  build=${scores.buildHealth}/100\n` +
+          `  notes: ${scores.notes}`,
+          "EVAL",
         );
+
+        if (scores.checklist.length > 0) {
+          const bottom3 = [...scores.checklist]
+            .sort((a, b) => a.score - b.score)
+            .slice(0, 3);
+          log(
+            `Lowest scores:\n${bottom3.map((c) => `  [${c.score}/100] ${c.requirement}`).join("\n")}`,
+            "EVAL",
+          );
+        }
 
         await postToGitHub(state, config, scores, i, state.currentModel);
         tryGitPush();
@@ -569,7 +700,9 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
           config,
           state.currentModel,
         );
-        log(`Model rotation: ${oldModel} → ${state.currentModel}`);
+        if (oldModel !== state.currentModel) {
+          log(`Model rotation: ${oldModel} → ${state.currentModel}`, "MODEL");
+        }
       }
 
       await saveState(state);
@@ -578,7 +711,7 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
   } finally {
     await client.stop();
     await saveState(state);
-    log("Ralph Loop complete");
+    log("Ralph Loop complete", "INFO");
   }
 }
 
