@@ -37,7 +37,17 @@
     "test:e2e": "vitest run --project e2e",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest --project unit --project integration",
+    "package": "pkg . --out-path bin --compress GZip",
     "prepare": "npm run build"
+  },
+  "pkg": {
+    "scripts": "dist/**/*.js",
+    "targets": [
+      "node18-linux-x64",
+      "node18-macos-x64",
+      "node18-macos-arm64",
+      "node18-win-x64"
+    ]
   },
   "keywords": [
     "github",
@@ -66,7 +76,9 @@
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
       "@semantic-release/npm",
-      "@semantic-release/github"
+      ["@semantic-release/github", {
+        "assets": "bin/*"
+      }]
     ]
   },
   "devDependencies": {
@@ -83,6 +95,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.0.0",
     "msw": "^2.0.0",
+    "pkg": "^5.8.1",
     "prettier": "^3.0.0",
     "semantic-release": "^24.0.0",
     "tsup": "^8.0.0",
