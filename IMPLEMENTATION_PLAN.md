@@ -318,3 +318,20 @@ This plan lists prioritized tasks required to bring the implementation into full
     - **README documentation**: Added Environment Variables table, Exit Codes table, and expanded config examples per CLI/spec.md requirements.
     - **Exit codes test**: Upgraded from re-implemented `getExitCode` to importing directly from `src/cli/index.ts` via Commander mock, adding 8 new tests for `createProgram()` and `resolveVersion()`.
     - All validation passes: `typecheck`, `lint` (0 errors, 0 warnings), `format:check`, `test` (334 tests), `build`, `npm audit --production` (0 vulnerabilities).
+
+## 23. Tool Execution Logging — Extract and Expand
+
+- **Task:** Extract tool-event formatting helpers from ralph-loop.ts into a dedicated testable module and expand test coverage. **[COMPLETE]**
+  - **Spec:** Logging/spec.md (Tool Execution Logging, Result Sampling)
+  - **Files:** src/ralph/toolLogging.ts (new), ralph-loop.ts, test/unit/ralph/toolLogging.test.ts (new)
+  - **Tests:** test/unit/ralph/toolLogging.test.ts (23 tests)
+  - **Dependencies:** None
+  - **Notes:**
+    - **Targets Tool Execution Logging [75/100]**: The existing formatToolArgs / summariseToolResult code was inlined in ralph-loop.ts, making it hard to test and verify independently.
+    - Extracted `getToolCategory()`, `formatToolArgs()`, `summariseToolResult()` to `src/ralph/toolLogging.ts` with comprehensive JSDoc.
+    - Added 23 unit tests covering all tool categories, argument shapes, and result sampling thresholds.
+    - Result sampling applies head+tail strategy at 500-char threshold per spec (200 head + 200 tail, annotated omission count).
+    - Also fixed MCP login tool elicitation flow: added `elicitedToken` persistence for interactive GitHub token collection via MCP host forms.
+    - Added `mcpInternals.resetElicitedToken()` to allow test isolation of elicited token state.
+    - All validation passes: `typecheck`, `lint` (0 errors), `test` (361 tests), `npm audit --production` (0 vulnerabilities).
+

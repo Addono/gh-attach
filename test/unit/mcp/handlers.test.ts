@@ -24,6 +24,8 @@ const hoisted = vi.hoisted(() => ({
   callToolHandler: undefined as CallToolHandler | undefined,
   listToolsHandler: undefined as ListToolsHandler | undefined,
   mockServerConnect: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  mockServerGetClientCapabilities: vi.fn<() => Record<string, unknown>>().mockReturnValue({}),
+  mockServerElicitInput: vi.fn<() => Promise<unknown>>().mockResolvedValue({ action: "cancel" }),
   mockServerSetRequestHandler: vi.fn((schema: unknown, handler: unknown) => {
     if (schema === hoisted.callToolSchema) {
       hoisted.callToolHandler = handler as CallToolHandler;
@@ -76,6 +78,8 @@ vi.mock("@modelcontextprotocol/sdk/server/index.js", () => ({
   Server: vi.fn().mockImplementation(() => ({
     setRequestHandler: hoisted.mockServerSetRequestHandler,
     connect: hoisted.mockServerConnect,
+    getClientCapabilities: hoisted.mockServerGetClientCapabilities,
+    elicitInput: hoisted.mockServerElicitInput,
   })),
 }));
 
@@ -108,7 +112,7 @@ vi.mock("../../../src/core/upload.js", () => ({
   upload: hoisted.mockUpload,
 }));
 
-import { createMCPServer } from "../../../src/mcp/index.js";
+import { createMCPServer, mcpInternals } from "../../../src/mcp/index.js";
 
 async function startServerAndGetHandlers(): Promise<{
   call: CallToolHandler;
@@ -135,6 +139,7 @@ describe("MCP server handlers", () => {
     process.env.GH_ATTACH_STATE_PATH = join(sessionDir, "session.json");
 
     vi.clearAllMocks();
+    mcpInternals.resetElicitedToken();
     hoisted.callToolHandler = undefined;
     hoisted.listToolsHandler = undefined;
     hoisted.mockReleaseStrategy.upload.mockResolvedValue(
@@ -446,5 +451,51 @@ describe("MCP server handlers", () => {
     const passedStrategies = (hoisted.mockUpload.mock.calls[0]?.[2] ??
       []) as UploadStrategy[];
     expect(passedStrategies.map((s) => s.name)).toEqual(["repo-branch"]);
+  });
+
+  it("login tool returns static guidance when client has no elicitation", async () => {
+    // Default mock: getClientCapabilities returns {} (no elicitation)
+    hoisted.mockServerGetClientCapabilities.mockReturnValue({});
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({ params: { name: "login", arguments: {} } });
+
+    expect(response.isError).toBeUndefined();
+    expect(response.content[0]?.text).toMatch(/GITHUB_TOKEN/);
+  });
+
+  it("login tool returns already-authenticated when token is set", async () => {
+    process.env.GITHUB_TOKEN = "ghs_test_existing";
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({ params: { name: "login", arguments: {} } });
+
+    expect(response.isError).toBeUndefined();
+    expect(response.content[0]?.text).toContain("Already authenticated");
+  });
+
+  it("login tool uses elicitation when client supports it and user accepts", async () => {
+    // Simulate client that supports form elicitation
+    hoisted.mockServerGetClientCapabilities.mockReturnValue({ elicitation: { form: true } });
+    hoisted.mockServerElicitInput.mockResolvedValue({
+      action: "accept",
+      content: { token: "ghs_elicited_token" },
+    });
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({ params: { name: "login", arguments: {} } });
+
+    expect(hoisted.mockServerElicitInput).toHaveBeenCalled();
+    expect(response.content[0]?.text).toContain("Authentication successful");
+  });
+
+  it("login tool handles elicitation cancel gracefully", async () => {
+    hoisted.mockServerGetClientCapabilities.mockReturnValue({ elicitation: { form: true } });
+    hoisted.mockServerElicitInput.mockResolvedValue({ action: "cancel" });
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({ params: { name: "login", arguments: {} } });
+
+    expect(response.content[0]?.text).toContain("cancelled");
   });
 });

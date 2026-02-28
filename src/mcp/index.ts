@@ -17,6 +17,7 @@ import {
   ListToolsRequestSchema,
   TextContent,
 } from "@modelcontextprotocol/sdk/types.js";
+import type { ElicitRequestFormParams } from "@modelcontextprotocol/sdk/types.js";
 import {
   createReleaseAssetStrategy,
   createBrowserSessionStrategy,
@@ -43,6 +44,23 @@ function getPackageVersion(): string {
 }
 
 const VERSION = getPackageVersion();
+
+/**
+ * Token obtained via MCP elicitation — persists for the lifetime of the server process.
+ * This allows the login tool to collect a GitHub token interactively when the MCP host
+ * supports form elicitation, without requiring environment variable configuration.
+ */
+let elicitedToken: string | null = null;
+
+/**
+ * Returns the effective GitHub API token from all sources:
+ * environment variables → MCP-elicited token.
+ */
+function getEffectiveToken(): string | undefined {
+  return (
+    process.env.GITHUB_TOKEN || process.env.GH_TOKEN || elicitedToken || undefined
+  );
+}
 
 /**
  * Tool definitions for the MCP server.
@@ -137,7 +155,7 @@ function createProtocolServer(): Server {
             args as Parameters<typeof handleUploadImage>[0],
           );
         case "login":
-          return await handleLogin();
+          return await handleLogin(server);
         case "check_auth":
           return await handleCheckAuth();
         case "list_strategies":
@@ -441,6 +459,10 @@ export async function createMCPServer(
  */
 export const mcpInternals = {
   startHttpServer,
+  /** Clears the in-process elicited token — for test isolation only. */
+  resetElicitedToken(): void {
+    elicitedToken = null;
+  },
 };
 
 /**
@@ -546,13 +568,92 @@ async function handleUploadImage(args: {
 
 /**
  * Handles the login tool call.
+ *
+ * When the MCP host supports form elicitation, guides the user through providing
+ * their GitHub Personal Access Token interactively. Falls back to static
+ * instructions when elicitation is unavailable.
  */
-async function handleLogin(): Promise<{ content: TextContent[] }> {
+async function handleLogin(
+  server: Server,
+): Promise<{ content: TextContent[] }> {
+  // Short-circuit: already authenticated via environment or prior elicitation
+  const existingToken = getEffectiveToken();
+  const existingCookies =
+    process.env.GH_ATTACH_COOKIES ?? getSessionCookies(loadSession());
+
+  if (existingToken || existingCookies) {
+    const via = existingToken ? "token" : "browser session";
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Already authenticated via ${via}. Use check_auth to see available strategies.`,
+        },
+      ],
+    };
+  }
+
+  // Attempt interactive elicitation when the MCP host supports it
+  const caps = server.getClientCapabilities();
+  if (caps?.elicitation) {
+    try {
+      const elicitParams: ElicitRequestFormParams = {
+        message:
+          "GitHub authentication required to upload images. Please provide a GitHub Personal Access Token with repo scope.",
+        requestedSchema: {
+          type: "object",
+          properties: {
+            token: {
+              type: "string",
+              title: "GitHub Personal Access Token",
+              description:
+                "Create one at https://github.com/settings/tokens (needs repo scope for private repos, or public_repo for public repos)",
+            },
+          },
+          required: ["token"],
+        },
+      };
+
+      const result = await server.elicitInput(elicitParams);
+
+      if (
+        result.action === "accept" &&
+        result.content &&
+        typeof result.content["token"] === "string" &&
+        result.content["token"].length > 0
+      ) {
+        elicitedToken = result.content["token"];
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Authentication successful. GitHub token saved for this session. You can now use upload_image.",
+            },
+          ],
+        };
+      }
+
+      if (result.action === "decline" || result.action === "cancel") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Authentication cancelled. Set the GITHUB_TOKEN environment variable or run 'gh-attach login' to authenticate.",
+            },
+          ],
+        };
+      }
+    } catch {
+      // Elicitation not supported at runtime — fall through to static guidance
+    }
+  }
+
+  // Static fallback guidance
   return {
     content: [
       {
         type: "text",
-        text: `To authenticate, set the GITHUB_TOKEN environment variable with a GitHub personal access token, or run 'gh-attach login' to save a browser session.`,
+        text: `To authenticate, set the GITHUB_TOKEN environment variable with a GitHub personal access token, or run 'gh-attach login' to save a browser session.\n\nCreate a token at: https://github.com/settings/tokens`,
       },
     ],
   };
@@ -562,7 +663,7 @@ async function handleLogin(): Promise<{ content: TextContent[] }> {
  * Handles the check_auth tool call.
  */
 async function handleCheckAuth(): Promise<{ content: TextContent[] }> {
-  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const token = getEffectiveToken();
   const cookies =
     process.env.GH_ATTACH_COOKIES ?? getSessionCookies(loadSession());
 
@@ -597,7 +698,7 @@ async function handleListStrategies(): Promise<{ content: TextContent[] }> {
     description: string;
   }> = [];
 
-  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const token = getEffectiveToken();
   const cookies =
     process.env.GH_ATTACH_COOKIES ?? getSessionCookies(loadSession());
 
@@ -638,7 +739,7 @@ async function handleListStrategies(): Promise<{ content: TextContent[] }> {
  */
 function getStrategies(preferredStrategy?: string): UploadStrategy[] {
   const strategies: UploadStrategy[] = [];
-  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const token = getEffectiveToken();
   const cookies =
     process.env.GH_ATTACH_COOKIES ?? getSessionCookies(loadSession());
 
