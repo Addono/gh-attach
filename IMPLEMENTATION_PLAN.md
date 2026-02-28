@@ -200,3 +200,15 @@ This plan lists prioritized tasks required to bring the implementation into full
   - **Notes:**
     - HTTP transport uses `StreamableHTTPServerTransport` and routes GET/POST/DELETE on `/` through the MCP SDK.
     - Integration test validates `initialize`, `tools/list`, and `tools/call` over Streamable HTTP, plus `/health`.
+
+## 16. Ralph Loop Fitness Evaluation Timeout Resilience
+- **Task:** Prevent fitness-evaluation fallbacks caused by `session.idle` timeouts by using a bounded timeout derived from loop config and one retry on timeout. **[COMPLETE]**
+  - **Spec:** Ralph-loop/spec.md (Fitness evaluation process), Logging/spec.md (Fitness evaluation logging)
+  - **Files:** src/ralph/evaluation.ts (new), ralph-loop.ts
+  - **Tests:** test/unit/ralph/evaluation.test.ts (new)
+  - **Dependencies:** None
+  - **Notes:**
+    - Targets the regression where evaluation timed out at 180s and forced fallback scores (`aggregate=0`), which suppresses checklist-driven score maximisation.
+    - Added a shared helper to clamp evaluation timeout to a safe 180s–600s window, using loop timeout config as the source of truth.
+    - Evaluation now retries once when the SDK reports a `session.idle` timeout, reducing transient fallback-score failures.
+    - Validation run after this change: `typecheck`, `lint` (warnings only), `test`, and `npm audit --production` all pass; audit reports 0 vulnerabilities.

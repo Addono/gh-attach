@@ -8,6 +8,10 @@ import {
   approveAll,
   type SessionEvent,
 } from "@github/copilot-sdk";
+import {
+  isSessionIdleTimeoutError,
+  resolveEvaluationTimeoutMs,
+} from "./src/ralph/evaluation.ts";
 
 // --- Types ---
 
@@ -245,43 +249,65 @@ Respond with ONLY a valid JSON object — no markdown, no code fences, no extra 
   ]
 }`;
 
-  const session = await client.createSession({
-    model: config.evaluationModel,
-    onPermissionRequest: approveAll,
-  });
+  const evaluationTimeoutMs = resolveEvaluationTimeoutMs(config.timeout);
+  const maxAttempts = 2;
 
-  try {
-    const response = await session.sendAndWait({ prompt: evalPrompt }, 180_000);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const session = await client.createSession({
+      model: config.evaluationModel,
+      onPermissionRequest: approveAll,
+    });
 
-    // Strip optional markdown code fences then extract outermost JSON object
-    const raw = response?.data?.content ?? "";
-    const stripped = raw.replace(/^```(?:json)?\s*/im, "").replace(/```\s*$/im, "").trim();
-    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]) as Partial<FitnessScores>;
-      const clamp = (n: unknown): number =>
-        Math.min(100, Math.max(0, Math.round(Number(n) || 0)));
-      return {
-        specCompliance: clamp(parsed.specCompliance),
-        testCoverage: clamp(parsed.testCoverage),
-        codeQuality: clamp(parsed.codeQuality),
-        buildHealth: clamp(parsed.buildHealth),
-        aggregate: clamp(parsed.aggregate),
-        notes: typeof parsed.notes === "string" ? parsed.notes : "No notes provided",
-        checklist: Array.isArray(parsed.checklist)
-          ? parsed.checklist.map((item) => ({
-              requirement: String((item as ChecklistItem).requirement ?? ""),
-              score: clamp((item as ChecklistItem).score),
-              reasoning: String((item as ChecklistItem).reasoning ?? ""),
-            }))
-          : [],
-      };
+    try {
+      const response = await session.sendAndWait(
+        { prompt: evalPrompt },
+        evaluationTimeoutMs,
+      );
+
+      // Strip optional markdown code fences then extract outermost JSON object
+      const raw = response?.data?.content ?? "";
+      const stripped = raw
+        .replace(/^```(?:json)?\s*/im, "")
+        .replace(/```\s*$/im, "")
+        .trim();
+      const jsonMatch = stripped.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as Partial<FitnessScores>;
+        const clamp = (n: unknown): number =>
+          Math.min(100, Math.max(0, Math.round(Number(n) || 0)));
+        return {
+          specCompliance: clamp(parsed.specCompliance),
+          testCoverage: clamp(parsed.testCoverage),
+          codeQuality: clamp(parsed.codeQuality),
+          buildHealth: clamp(parsed.buildHealth),
+          aggregate: clamp(parsed.aggregate),
+          notes:
+            typeof parsed.notes === "string" ? parsed.notes : "No notes provided",
+          checklist: Array.isArray(parsed.checklist)
+            ? parsed.checklist.map((item) => ({
+                requirement: String((item as ChecklistItem).requirement ?? ""),
+                score: clamp((item as ChecklistItem).score),
+                reasoning: String((item as ChecklistItem).reasoning ?? ""),
+              }))
+            : [],
+        };
+      }
+      log(
+        `Fitness evaluation: could not extract JSON from response (len=${raw.length})`,
+        "WARN",
+      );
+    } catch (err) {
+      if (isSessionIdleTimeoutError(err) && attempt < maxAttempts) {
+        log(
+          `Fitness evaluation timed out after ${evaluationTimeoutMs}ms; retrying once`,
+          "WARN",
+        );
+        continue;
+      }
+      log(`Fitness evaluation error: ${err}`, "ERROR");
+    } finally {
+      await session.destroy();
     }
-    log(`Fitness evaluation: could not extract JSON from response (len=${raw.length})`, "WARN");
-  } catch (err) {
-    log(`Fitness evaluation error: ${err}`, "ERROR");
-  } finally {
-    await session.destroy();
   }
 
   // Fallback scores based on objective metrics
