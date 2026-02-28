@@ -30,6 +30,19 @@ function parseRepo(): { owner: string; repo: string } | null {
   return { owner: parts[0], repo: parts[1] };
 }
 
+// When E2E is disabled, emit a clear message describing what is skipped and why.
+describe("E2E gating", () => {
+  it("requires E2E_TESTS=true, GITHUB_TOKEN, and E2E_TEST_REPO to run real tests", () => {
+    if (!E2E_ENABLED) {
+      console.log(
+        "[E2E] Tests skipped — set E2E_TESTS=true with GITHUB_TOKEN and E2E_TEST_REPO to run against real GitHub infrastructure.",
+      );
+    }
+    // This test always passes; it documents the gating requirement.
+    expect(true).toBe(true);
+  });
+});
+
 describe.skipIf(!E2E_ENABLED)("E2E Upload Tests", () => {
   let octokit: InstanceType<typeof Octokit>;
   let target: UploadTarget;

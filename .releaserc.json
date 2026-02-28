@@ -1,0 +1,32 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md"
+      }
+    ],
+    "@semantic-release/npm",
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "bin/gh-attach-linux", "label": "Linux x64 binary" },
+          { "path": "bin/gh-attach-macos", "label": "macOS x64 binary" },
+          { "path": "bin/gh-attach-macos-arm64", "label": "macOS arm64 binary" },
+          { "path": "bin/gh-attach-win.exe", "label": "Windows x64 binary" }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["CHANGELOG.md", "package.json", "package-lock.json"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ]
+  ]
+}
