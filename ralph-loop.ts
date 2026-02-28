@@ -14,6 +14,7 @@ import {
   resolveEvaluationTimeoutMs,
 } from "./src/ralph/evaluation.ts";
 import { shouldEmitLog, type RalphLogLevel } from "./src/ralph/logging.ts";
+import { registerShutdownHandler } from "./src/ralph/shutdown.ts";
 import {
   formatToolArgs,
   getToolCategory,
@@ -763,17 +764,15 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
     log(`Initial model selected: ${state.currentModel}`, "MODEL");
   }
 
-  // Graceful shutdown
+  // Graceful shutdown — allow current iteration to finish then save state.
   let shuttingDown = false;
-  process.on("SIGINT", () => {
-    if (shuttingDown) process.exit(1);
-    shuttingDown = true;
-    log("SIGINT received, finishing current iteration…", "WARN");
-    setTimeout(() => {
-      log("Grace period expired, saving state and exiting", "WARN");
-      saveState(state).then(() => process.exit(0));
-    }, 5000);
-  });
+  registerShutdownHandler(
+    (value) => {
+      shuttingDown = value;
+    },
+    () => saveState(state),
+    log,
+  );
 
   try {
     const basePrompt = await readFile(promptFile, "utf-8");

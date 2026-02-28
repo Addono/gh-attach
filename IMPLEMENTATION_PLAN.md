@@ -335,3 +335,19 @@ This plan lists prioritized tasks required to bring the implementation into full
     - Added `mcpInternals.resetElicitedToken()` to allow test isolation of elicited token state.
     - All validation passes: `typecheck`, `lint` (0 errors), `test` (361 tests), `npm audit --production` (0 vulnerabilities).
 
+## 24. Graceful Shutdown — Extract and Test
+
+- **Task:** Extract SIGINT handler from ralph-loop.ts into a testable module with 6 unit tests. **[COMPLETE]**
+  - **Spec:** Ralph-loop/spec.md (Graceful Shutdown, SIGINT handling, 5-second grace period)
+  - **Files:** src/ralph/shutdown.ts (new), ralph-loop.ts, test/unit/ralph/shutdown.test.ts (new)
+  - **Tests:** test/unit/ralph/shutdown.test.ts (6 tests)
+  - **Dependencies:** None
+  - **Notes:**
+    - **Targets Graceful Shutdown [70/100]**: The shutdown logic was inlined in ralph-loop.ts making it hard to verify. Evaluator noted "interrupt handling unclear" and "grace period timeout not observed".
+    - Extracted `registerShutdownHandler()` with `SaveStateFn` and `LogFn` callbacks to `src/ralph/shutdown.ts`.
+    - Exports `GRACE_PERIOD_MS = 5000` constant to make the grace period explicit and testable.
+    - Handler: first SIGINT sets shuttingDown flag + starts 5s grace period timer; second SIGINT forces immediate exit(1); grace period expiry saves state and exits(0).
+    - Updated ralph-loop.ts to use `registerShutdownHandler()` instead of inline process.on().
+    - All validation passes: `typecheck`, `lint` (0 errors), `test` (367 tests), `npm audit --production` (0 vulnerabilities).
+
+
