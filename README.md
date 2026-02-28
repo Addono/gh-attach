@@ -1,5 +1,8 @@
 # gh-attach
 
+[![CI](https://github.com/Addono/github-attach/actions/workflows/ci.yml/badge.svg)](https://github.com/Addono/github-attach/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/gh-attach)](https://www.npmjs.com/package/gh-attach)
+
 > Upload images to GitHub issues, PRs, and comments — from the CLI or via MCP.
 
 GitHub doesn't provide an official API for attaching images to issues and pull requests. `gh-attach` fills this gap with multiple upload strategies, a clean CLI, and an MCP server for AI-powered workflows.
