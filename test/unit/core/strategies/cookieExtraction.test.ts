@@ -354,6 +354,7 @@ Path=/opt/firefox/dev
     });
 
     it("upload throws UploadError if cookies null but errors exist", async () => {
+      setPlatform("linux");
       vi.mocked(fs.existsSync).mockImplementation((p) => {
         return (p as string).includes(".config/google-chrome");
       });
