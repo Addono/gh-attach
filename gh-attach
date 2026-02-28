@@ -8,23 +8,23 @@ ARCH="$(uname -m 2>/dev/null || echo unknown)"
 
 case "$OS" in
   Linux*) PLATFORM="linux" ;;
-  Darwin*) PLATFORM="macos" ;;
-  MINGW*|MSYS*|CYGWIN*) PLATFORM="win" ;;
+  Darwin*) PLATFORM="darwin" ;;
+  MINGW*|MSYS*|CYGWIN*) PLATFORM="windows" ;;
   *) PLATFORM="unknown" ;;
 esac
 
 case "$ARCH" in
-  x86_64|amd64) CPU="x64" ;;
+  x86_64|amd64) CPU="amd64" ;;
   arm64|aarch64) CPU="arm64" ;;
   *) CPU="unknown" ;;
 esac
 
 ASSET=""
 case "$PLATFORM/$CPU" in
-  linux/x64) ASSET="gh-attach-linux-x64" ;;
-  macos/x64) ASSET="gh-attach-macos-x64" ;;
-  macos/arm64) ASSET="gh-attach-macos-arm64" ;;
-  win/x64) ASSET="gh-attach-win-x64.exe" ;;
+  linux/amd64) ASSET="gh-attach-linux-amd64" ;;
+  darwin/amd64) ASSET="gh-attach-darwin-amd64" ;;
+  darwin/arm64) ASSET="gh-attach-darwin-arm64" ;;
+  windows/amd64) ASSET="gh-attach-windows-amd64.exe" ;;
 esac
 
 BIN_DIR="$DIR/bin"

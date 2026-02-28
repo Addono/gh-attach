@@ -14,10 +14,10 @@
       "@semantic-release/github",
       {
         "assets": [
-          { "path": "bin/gh-attach-linux", "label": "Linux x64 binary" },
-          { "path": "bin/gh-attach-macos", "label": "macOS x64 binary" },
-          { "path": "bin/gh-attach-macos-arm64", "label": "macOS arm64 binary" },
-          { "path": "bin/gh-attach-win.exe", "label": "Windows x64 binary" }
+          { "path": "bin/gh-attach-linux-amd64", "label": "Linux x64 binary" },
+          { "path": "bin/gh-attach-darwin-amd64", "label": "macOS x64 binary" },
+          { "path": "bin/gh-attach-darwin-arm64", "label": "macOS arm64 binary" },
+          { "path": "bin/gh-attach-windows-amd64.exe", "label": "Windows x64 binary" }
         ]
       }
     ],

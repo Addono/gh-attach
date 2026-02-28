@@ -498,4 +498,19 @@ describe("MCP server handlers", () => {
 
     expect(response.content[0]?.text).toContain("cancelled");
   });
+
+  it("login tool falls back to static guidance when elicitInput throws", async () => {
+    // Simulate elicitation capability present but elicitInput throws at runtime
+    hoisted.mockServerGetClientCapabilities.mockReturnValue({ elicitation: { form: true } });
+    hoisted.mockServerElicitInput.mockRejectedValue(
+      new Error("Elicitation not supported at runtime"),
+    );
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({ params: { name: "login", arguments: {} } });
+
+    // Should fall through to static guidance without error
+    expect(response.isError).toBeUndefined();
+    expect(response.content[0]?.text).toMatch(/GITHUB_TOKEN/);
+  });
 });

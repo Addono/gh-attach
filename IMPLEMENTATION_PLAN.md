@@ -384,3 +384,19 @@ This plan lists prioritized tasks required to bring the implementation into full
     - Expanded README branch protection section with: detailed settings table, specific CI check names (`Lint & Format`, `Typecheck`, `Build`, `Test (Node 22, ubuntu-latest)`), and a `gh api` command for programmatic branch protection setup.
     - Added `.github/CODEOWNERS` to declare required code reviewers per directory (root, .github/, src/core/, src/cli/, src/mcp/).
     - All validation passes: `typecheck`, `lint`, `test` (367 tests), `npm audit --production` (0 vulnerabilities).
+
+## 27. Release Artifact Naming and MCP Login Test Coverage
+
+- **Task:** Fix gh extension binary naming convention and improve MCP login elicitation test coverage. **[COMPLETE]**
+  - **Spec:** CI-CD/spec.md (Release Artifacts, gh extension release), MCP/spec.md (Login Tool - elicitation flow)
+  - **Files:** package.json, .releaserc.json, gh-attach, test/unit/cli/ghExtensionEntrypoint.test.ts, test/unit/mcp/handlers.test.ts
+  - **Tests:** test/unit/mcp/handlers.test.ts (+1 test for elicitation throw), test/unit/cli/ghExtensionEntrypoint.test.ts (updated binary name)
+  - **Dependencies:** None
+  - **Notes:**
+    - **Targets Release Artifacts [50/100]** and **Login Tool [75/100]** from Score-Maximisation Context.
+    - Fixed critical mismatch: `.releaserc.json` referenced `bin/gh-attach-linux`, `bin/gh-attach-macos`, `bin/gh-attach-win.exe` but pkg actually produces `gh-attach-linux-x64`, `gh-attach-macos-x64`, `gh-attach-win-x64.exe`. The release workflow would silently fail to upload binaries.
+    - Updated binary naming to follow GitHub CLI extension convention (GOOS/GOARCH format): `linux-amd64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.exe`.
+    - Updated `package` script in package.json to add post-build rename step so pkg outputs are moved to proper gh extension names.
+    - Updated `gh-attach` entry point script to use correct platform/arch detection for new binary names.
+    - Added unit test for MCP login tool `elicitInput` throw path (previously uncovered line 648 in src/mcp/index.ts) — verifies graceful fallback to static guidance.
+    - All validation passes: `typecheck`, `lint`, `test` (368 tests), `npm audit --production` (0 vulnerabilities).
