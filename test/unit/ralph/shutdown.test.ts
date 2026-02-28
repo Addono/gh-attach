@@ -4,13 +4,13 @@ import {
   registerShutdownHandler,
 } from "../../../src/ralph/shutdown.js";
 
-describe("registerShutdownHandler", () => {
+describe("registerShutdownHandler — spec: Ralph Loop Graceful Shutdown", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
-  it("sets shuttingDown flag on first SIGINT", () => {
+  it("sets shuttingDown flag on first SIGINT (spec: Graceful Shutdown — SIGINT handling)", () => {
     let isShuttingDown = false;
     const saveState = vi.fn().mockResolvedValue(undefined);
     const log = vi.fn();
@@ -34,7 +34,7 @@ describe("registerShutdownHandler", () => {
     remove();
   });
 
-  it("logs a WARN on SIGINT", () => {
+  it("logs a WARN on SIGINT (spec: Graceful Shutdown — SIGINT handling)", () => {
     const log = vi.fn();
     const remove = registerShutdownHandler(
       () => {},
@@ -48,7 +48,7 @@ describe("registerShutdownHandler", () => {
     remove();
   });
 
-  it("saves state and exits after grace period expires", async () => {
+  it("saves state and exits after grace period expires (spec: Graceful Shutdown — timeout management)", async () => {
     vi.useFakeTimers();
     const exitSpy = vi
       .spyOn(process, "exit")
@@ -73,7 +73,7 @@ describe("registerShutdownHandler", () => {
     remove();
   });
 
-  it("exits immediately with code 1 on second SIGINT", () => {
+  it("exits immediately with code 1 on second SIGINT (spec: Graceful Shutdown — force exit)", () => {
     vi.useFakeTimers();
     const exitSpy = vi
       .spyOn(process, "exit")
@@ -93,7 +93,7 @@ describe("registerShutdownHandler", () => {
     remove();
   });
 
-  it("returns a function that removes the handler", () => {
+  it("returns a function that removes the handler (spec: Graceful Shutdown — handler cleanup)", () => {
     let callCount = 0;
     const remove = registerShutdownHandler(
       () => {
@@ -110,7 +110,7 @@ describe("registerShutdownHandler", () => {
     expect(callCount).toBe(0);
   });
 
-  it("GRACE_PERIOD_MS is 5000", () => {
+  it("GRACE_PERIOD_MS is 5000 (spec: Graceful Shutdown — grace period)", () => {
     expect(GRACE_PERIOD_MS).toBe(5_000);
   });
 });

@@ -197,6 +197,41 @@ describe("runBuildSession — spec: Ralph Loop Core Loop execution", () => {
     expect(iterLog).toMatch(/Iteration 9 complete in \d+s/);
   });
 
+  it("logs structured model tracking fields after completion (spec: Model Tracking — iteration, model, startTime, endTime, outcome)", async () => {
+    const logs: string[] = [];
+    await runBuildSession(
+      mockClient as unknown as CopilotClient,
+      11,
+      "prompt",
+      makeConfig({ model: "gpt-4.1" }),
+      (msg) => logs.push(msg),
+    );
+
+    const trackingLog = logs.find((l) => l.includes("[Model Tracking]"));
+    expect(trackingLog).toBeDefined();
+    expect(trackingLog).toContain("iteration=11");
+    expect(trackingLog).toContain("model=gpt-4.1");
+    expect(trackingLog).toMatch(/startTime=\d{4}-\d{2}-\d{2}T/);
+    expect(trackingLog).toMatch(/endTime=\d{4}-\d{2}-\d{2}T/);
+    expect(trackingLog).toContain("outcome=success");
+  });
+
+  it("logs outcome=failure in model tracking when session errors (spec: Model Tracking — outcome field)", async () => {
+    mockSession.sendAndWait.mockRejectedValue(new Error("network failure"));
+    const logs: string[] = [];
+    await runBuildSession(
+      mockClient as unknown as CopilotClient,
+      12,
+      "prompt",
+      makeConfig(),
+      (msg) => logs.push(msg),
+    );
+
+    const trackingLog = logs.find((l) => l.includes("[Model Tracking]"));
+    expect(trackingLog).toBeDefined();
+    expect(trackingLog).toContain("outcome=failure");
+  });
+
   it("uses the configured timeout when calling sendAndWait", async () => {
     await runBuildSession(
       mockClient as unknown as CopilotClient,

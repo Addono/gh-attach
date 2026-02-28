@@ -120,7 +120,8 @@ export async function runBuildSession(
     }
   });
 
-  const startTime = Date.now();
+  const startTimeMs = Date.now();
+  const startTime = new Date(startTimeMs).toISOString();
   let success = false;
 
   try {
@@ -134,16 +135,23 @@ export async function runBuildSession(
     await session.destroy();
   }
 
-  const elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
+  const endTimeMs = Date.now();
+  const endTime = new Date(endTimeMs).toISOString();
+  const elapsedSeconds = Math.round((endTimeMs - startTimeMs) / 1000);
   const toolSummary = Object.entries(toolCounts)
     .sort((a, b) => b[1] - a[1])
     .map(([t, n]) => `${t}×${n}`)
     .join(", ");
 
-  // Step 5 — Log outcome.
+  // Step 5 — Log outcome with structured model tracking fields per spec.
+  // spec: Model Tracking — { iteration, model, startTime, endTime, outcome }
   log(
     `Iteration ${iteration} complete in ${elapsedSeconds}s | Tools used: ${toolSummary || "none"}`,
     "ITER",
+  );
+  log(
+    `[Model Tracking] iteration=${iteration} model=${config.model} startTime=${startTime} endTime=${endTime} outcome=${success ? "success" : "failure"}`,
+    "MODEL",
   );
 
   return {

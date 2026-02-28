@@ -1,11 +1,8 @@
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { execSync } from "child_process";
-import {
-  CopilotClient,
-  approveAll,
-  type SessionEvent,
-} from "@github/copilot-sdk";
+import { CopilotClient } from "@github/copilot-sdk";
+import { runBuildSession } from "./src/ralph/loop.ts";
 import {
   deriveFallbackFitnessScores,
   resolveEvaluationTimeoutMs,
@@ -13,11 +10,6 @@ import {
 } from "./src/ralph/evaluation.ts";
 import { shouldEmitLog, type RalphLogLevel } from "./src/ralph/logging.ts";
 import { registerShutdownHandler } from "./src/ralph/shutdown.ts";
-import {
-  formatToolArgs,
-  getToolCategory,
-  summariseToolResult,
-} from "./src/ralph/toolLogging.ts";
 import {
   deriveCiStatus,
   generateCiBlockedComment,
@@ -361,8 +353,8 @@ async function collectSourceEvidence(): Promise<string> {
   // Spec-compliance test names: grep test files for named spec requirements.
   // This surfaces evidence that tests exist for each spec scenario without re-running tests.
   const specTestNames = runCommand(
-    `grep -rh "spec:" test/ --include="*.ts" | sed 's/^[[:space:]]*//' | grep -v "^//" | grep -v "^\\*" | sort -u | head -80`,
-    4000,
+    `grep -rh "spec:" test/ --include="*.ts" | sed 's/^[[:space:]]*//' | grep -v "^//" | grep -v "^\\*" | sort -u | head -120`,
+    6000,
   );
   evidence.push(
     `=== spec-compliance test names (grep of test/ for "spec:" labels) ===\n${specTestNames.output}`,
@@ -841,79 +833,14 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
         await postCiBlockedNotification(state, config, i, log);
       }
 
-      const session = await client.createSession({
-        model: state.currentModel,
-        onPermissionRequest: approveAll,
-      });
-
-      const toolCounts: Record<string, number> = {};
-      // Track per-call start times for execution-time reporting
-      const toolStartTimes = new Map<string, number>();
-      // Track current agent intent for Model Reasoning Logging — intent changes are logged
-      let currentIntent: string | null = null;
-      session.on((event: SessionEvent) => {
-        if (event.type === "tool.execution_start") {
-          const name = event.data.toolName;
-          toolCounts[name] = (toolCounts[name] ?? 0) + 1;
-          toolStartTimes.set(event.data.toolCallId, Date.now());
-          const category = getToolCategory(name);
-          const detail = formatToolArgs(name, event.data.arguments);
-          log(
-            `⚙ ${name} (${category})${detail ? ` — ${detail}` : ""}`,
-            "DEBUG",
-          );
-          // Model Reasoning Logging: track intent changes via report_intent tool calls
-          if (
-            name === "report_intent" &&
-            typeof (event.data.arguments as Record<string, unknown>)?.intent ===
-              "string"
-          ) {
-            const newIntent = String(
-              (event.data.arguments as Record<string, unknown>).intent,
-            ).trim();
-            if (newIntent && newIntent !== currentIntent) {
-              if (currentIntent !== null) {
-                log(`[Intent] Previous: ${currentIntent}`, "DEBUG");
-              }
-              log(`[Intent] New: ${newIntent}`, "DEBUG");
-              currentIntent = newIntent;
-            }
-          }
-        } else if (event.type === "tool.execution_progress") {
-          const msg = event.data.progressMessage?.trim();
-          if (msg) log(`  ↳ ${msg}`, "DEBUG");
-        } else if (event.type === "tool.execution_complete") {
-          const { success, result } = event.data;
-          const started = toolStartTimes.get(event.data.toolCallId);
-          const elapsedMs = started ? Date.now() - started : null;
-          const timeSuffix = elapsedMs !== null ? ` (${elapsedMs}ms)` : "";
-          if (!success) {
-            const snippet = result?.content?.slice(0, 200) ?? "(no output)";
-            log(`  ✗ tool failed${timeSuffix}: ${snippet}`, "WARN");
-          } else if (result?.content) {
-            const snippet = summariseToolResult(result.content);
-            if (snippet) log(`  ✓${timeSuffix} ${snippet}`, "DEBUG");
-          }
-        }
-      });
-
-      const startTime = Date.now();
-      try {
-        await session.sendAndWait({ prompt }, config.timeout);
-      } catch (err) {
-        log(`Iteration ${i} error: ${err}`, "ERROR");
-      } finally {
-        await session.destroy();
-      }
-
-      const elapsed = Math.round((Date.now() - startTime) / 1000);
-      const toolSummary = Object.entries(toolCounts)
-        .sort((a, b) => b[1] - a[1])
-        .map(([t, n]) => `${t}×${n}`)
-        .join(", ");
-      log(
-        `Iteration ${i} complete in ${elapsed}s | Tools used: ${toolSummary || "none"}`,
-        "ITER",
+      // Run one iteration using the extracted, testable runBuildSession module.
+      // spec: Ralph Loop Core — Loop execution (createSession, sendAndWait, destroy)
+      await runBuildSession(
+        client,
+        i,
+        prompt,
+        { model: state.currentModel, timeout: config.timeout },
+        log,
       );
 
       state.currentIteration = i;

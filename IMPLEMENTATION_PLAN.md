@@ -680,3 +680,28 @@ This plan lists prioritized tasks required to bring the implementation into full
       - `**Notes**: {notes}` field as required by spec
     - **Updated evidence**: Added `src/ralph/evaluation.ts` slice to `collectSourceEvidence()` showing `runFitnessEvaluation` implementation. Extended `src/ralph/github.ts` slice to 4500 chars to show the full `generateCommentBody` with the new fields.
     - All validation passes: `typecheck`, `lint` (0 errors), `format:check`, `test` (528 tests), `npm audit --production` (0 vulnerabilities).
+
+## 43. Refactor Loop Core + Model Tracking + PROMPT File Tests + Graceful Shutdown Labels
+
+- **Task:** Refactor ralph-loop.ts to use `runBuildSession()`, add model tracking log, add PROMPT file tests, and add spec: labels to shutdown tests. **[COMPLETE]**
+  - **Spec:** Ralph-loop/spec.md (Loop Core Execution, Model Tracking, PROMPT Files, Graceful Shutdown)
+  - **Files:** ralph-loop.ts, src/ralph/loop.ts, test/unit/ralph/loop.test.ts, test/unit/ralph/shutdown.test.ts, test/unit/ralph/promptFiles.test.ts (new)
+  - **Tests:** 537 total (up from 528, +9 new tests)
+  - **Dependencies:** None
+  - **Notes:**
+    - **Targets Loop Core Execution (10/100)** — Refactored `ralph-loop.ts` main loop to call `runBuildSession()` from `src/ralph/loop.ts` instead of duplicating the inline session handling. This directly links the 10 spec-labeled unit tests for `runBuildSession` to the production code path.
+    - **Targets Model Tracking (15/100)** — Added `[Model Tracking] iteration=N model=M startTime=ISO endTime=ISO outcome=success|failure` log to `runBuildSession()` per spec requirement for `{ iteration, model, startTime, endTime, outcome }`.
+    - **Added 2 new model tracking tests** to `test/unit/ralph/loop.test.ts`:
+      - "logs structured model tracking fields after completion (spec: Model Tracking — iteration, model, startTime, endTime, outcome)"
+      - "logs outcome=failure in model tracking when session errors (spec: Model Tracking — outcome field)"
+    - **Targets Graceful Shutdown (20/100)** — Added spec: labels to all 6 tests in `test/unit/ralph/shutdown.test.ts`: SIGINT handling, timeout management, force exit, handler cleanup, grace period.
+    - **Targets PROMPT Files (25/100)** — Added `test/unit/ralph/promptFiles.test.ts` with 7 spec-labeled tests validating:
+      - `PROMPT_build.md` exists (spec: Build mode prompt)
+      - `PROMPT_plan.md` exists (spec: Plan mode prompt)
+      - `PROMPT_build.md` references IMPLEMENTATION_PLAN.md (spec: implement tasks from plan)
+      - `PROMPT_plan.md` references openspec/specs (spec: gap analysis)
+      - `PROMPT_build.md` instructs running tests (spec: run tests before committing)
+      - `ralph-loop.ts` reads PROMPT_build.md in build mode (spec: Build mode prompt selection)
+      - `ralph-loop.ts` selects mode from argv (spec: plan/build mode argument)
+    - Increased spec-compliance test name grep from `head -80` to `head -120` in evidence collection.
+    - All validation passes: `typecheck`, `lint` (0 errors), `format:check`, `test` (537 tests), `npm audit --production` (0 vulnerabilities).
