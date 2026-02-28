@@ -369,3 +369,18 @@ This plan lists prioritized tasks required to bring the implementation into full
 
 
 
+
+## 26. Evaluation Evidence and Branch Protection Documentation
+
+- **Task:** Improve fitness evaluation evidence quality and expand branch protection documentation. **[COMPLETE]**
+  - **Spec:** CI-CD/spec.md (Branch Protection), Ralph-loop/spec.md (Evaluation Scoring Card)
+  - **Files:** ralph-loop.ts, README.md, .github/CODEOWNERS (new)
+  - **Tests:** None (no new tests; typecheck/lint/test all pass)
+  - **Dependencies:** None
+  - **Notes:**
+    - **Targets Branch Protection [65/100]** and **Evaluation Scoring Card [75/100]** from Score-Maximisation Context.
+    - Added `collectSourceEvidence()` helper that reads key config files (.github/workflows/ci.yml, release.yml, .releaserc.json, dependabot.yml, test/e2e/upload.test.ts, src/ralph/shutdown.ts) and directory listings, then includes them in the evaluation prompt.
+    - The evaluator now has grounded file evidence for all low-scoring CI/CD/Release/E2E items instead of having to infer from build output alone.
+    - Expanded README branch protection section with: detailed settings table, specific CI check names (`Lint & Format`, `Typecheck`, `Build`, `Test (Node 22, ubuntu-latest)`), and a `gh api` command for programmatic branch protection setup.
+    - Added `.github/CODEOWNERS` to declare required code reviewers per directory (root, .github/, src/core/, src/cli/, src/mcp/).
+    - All validation passes: `typecheck`, `lint`, `test` (367 tests), `npm audit --production` (0 vulnerabilities).
