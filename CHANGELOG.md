@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/Addono/github-attach/compare/v1.0.1...v1.0.2) (2026-02-28)
+
+
+### Bug Fixes
+
+* format CHANGELOG.md and ignore it in prettier checks ([98fe411](https://github.com/Addono/github-attach/commit/98fe411b56e664419750f9497b65af100a493340))
+
 ## [1.0.1](https://github.com/Addono/github-attach/compare/v1.0.0...v1.0.1) (2026-02-28)
 
 
