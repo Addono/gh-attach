@@ -1,5 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { existsSync } from "fs";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { existsSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import { saveSession } from "../../../src/core/session.js";
 import type { UploadStrategy } from "../../../src/core/types.js";
 
 type ToolResult = {
@@ -119,10 +122,17 @@ async function startServerAndGetHandlers(): Promise<{
 }
 
 describe("MCP server handlers", () => {
+  let origStatePath: string | undefined;
+  let sessionDir: string;
+
   beforeEach(() => {
     delete process.env.GITHUB_TOKEN;
     delete process.env.GH_TOKEN;
     delete process.env.GH_ATTACH_COOKIES;
+
+    origStatePath = process.env.GH_ATTACH_STATE_PATH;
+    sessionDir = join(tmpdir(), `gh-attach-mcp-test-${Date.now()}`);
+    process.env.GH_ATTACH_STATE_PATH = join(sessionDir, "session.json");
 
     vi.clearAllMocks();
     hoisted.callToolHandler = undefined;
@@ -140,6 +150,20 @@ describe("MCP server handlers", () => {
     hoisted.mockParseTarget.mockReturnValue(hoisted.mockTarget);
     hoisted.mockValidateFile.mockResolvedValue(undefined);
     hoisted.mockUpload.mockResolvedValue(hoisted.mockUploadResult);
+  });
+
+  afterEach(() => {
+    try {
+      rmSync(sessionDir, { recursive: true, force: true });
+    } catch {
+      // ignore
+    }
+
+    if (origStatePath) {
+      process.env.GH_ATTACH_STATE_PATH = origStatePath;
+    } else {
+      delete process.env.GH_ATTACH_STATE_PATH;
+    }
   });
 
   it("registers required tools with strict upload format enum", async () => {
@@ -196,6 +220,26 @@ describe("MCP server handlers", () => {
       "browser-session",
       "cookie-extraction",
     ]);
+  });
+
+  it("reports authenticated status from saved session cookies", async () => {
+    saveSession({
+      cookies: "user_session=abc123; logged_in=yes",
+      expires: Date.now() + 86400000,
+    });
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({
+      params: { name: "check_auth", arguments: {} },
+    });
+
+    const body = JSON.parse(response.content[0]?.text ?? "{}") as {
+      authenticated: boolean;
+      strategies: string[];
+    };
+
+    expect(body.authenticated).toBe(true);
+    expect(body.strategies).toEqual(["browser-session", "cookie-extraction"]);
   });
 
   it("lists strategy availability based on auth signals", async () => {

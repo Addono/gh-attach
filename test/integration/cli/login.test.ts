@@ -1,15 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { unlinkSync, mkdirSync, existsSync } from "fs";
+import { unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import { loginCommand, saveSession } from "../../../src/cli/commands/login.js";
+import { loginCommand } from "../../../src/cli/commands/login.js";
+import { saveSession } from "../../../src/core/session.js";
 
 describe("loginCommand integration tests", () => {
   let testStateDir: string;
   let origStateEnv: string | undefined;
+  let origExitCode: number | undefined;
 
   beforeEach(() => {
     origStateEnv = process.env.GH_ATTACH_STATE_PATH;
+    origExitCode = process.exitCode;
+    process.exitCode = undefined;
+
     testStateDir = join(homedir(), `.test-gh-attach-state-${Date.now()}`);
     process.env.GH_ATTACH_STATE_PATH = join(testStateDir, "session.json");
   });
@@ -46,27 +51,19 @@ describe("loginCommand integration tests", () => {
     } else {
       delete process.env.GH_ATTACH_STATE_PATH;
     }
+
+    process.exitCode = origExitCode;
   });
 
   it("should check status when no session exists", async () => {
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("process.exit called");
-    });
 
-    try {
-      await loginCommand({ status: true });
-    } catch (err) {
-      if (!(err instanceof Error) || err.message !== "process.exit called") {
-        throw err;
-      }
-    }
+    await loginCommand({ status: true });
 
     expect(consoleSpy).toHaveBeenCalledWith("Status: not authenticated");
-    expect(exitSpy).toHaveBeenCalledWith(2);
+    expect(process.exitCode).toBe(2);
 
     consoleSpy.mockRestore();
-    exitSpy.mockRestore();
   });
 
   it("should check status when session exists and is valid", async () => {
@@ -86,11 +83,31 @@ describe("loginCommand integration tests", () => {
     consoleSpy.mockRestore();
   });
 
+  it("should honor --state-path over GH_ATTACH_STATE_PATH", async () => {
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const envPath = join(testStateDir, "env-session.json");
+    const flagPath = join(testStateDir, "flag-session.json");
+    process.env.GH_ATTACH_STATE_PATH = envPath;
+
+    await saveSession(
+      {
+        username: "flaguser",
+        expires: Date.now() + 86400000,
+      },
+      { statePath: flagPath },
+    );
+
+    await loginCommand({ status: true, statePath: flagPath });
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Status: authenticated as flaguser",
+    );
+    consoleSpy.mockRestore();
+  });
+
   it("should check status when session is expired", async () => {
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("process.exit called");
-    });
 
     // Create an expired session
     await saveSession({
@@ -98,19 +115,12 @@ describe("loginCommand integration tests", () => {
       expires: Date.now() - 1000, // 1 second ago
     });
 
-    try {
-      await loginCommand({ status: true });
-    } catch (err) {
-      if (!(err instanceof Error) || err.message !== "process.exit called") {
-        throw err;
-      }
-    }
+    await loginCommand({ status: true });
 
     expect(consoleSpy).toHaveBeenCalledWith("Status: session expired");
-    expect(exitSpy).toHaveBeenCalledWith(2);
+    expect(process.exitCode).toBe(2);
 
     consoleSpy.mockRestore();
-    exitSpy.mockRestore();
   });
 
   it("should attempt interactive login with browser", async () => {
@@ -168,7 +178,7 @@ describe("loginCommand integration tests", () => {
     await loginCommand({ status: true });
 
     expect(consoleSpy).toHaveBeenCalledWith(
-      "Status: session found but username not set",
+      "Status: authenticated (username unknown)",
     );
     consoleSpy.mockRestore();
   });

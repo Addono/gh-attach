@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { randomUUID } from "crypto";
 import { join } from "path";
-import { writeFileSync, unlinkSync, mkdirSync } from "fs";
+import { writeFileSync, unlinkSync, rmSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
 
 // Mock the MCP SDK - these are complex external dependencies
@@ -71,6 +71,8 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 
 describe("MCP Server Integration", () => {
   let testImagePath: string;
+  let origStatePath: string | undefined;
+  let sessionDir: string;
   const tmpDir = tmpdir();
 
   beforeEach(() => {
@@ -82,6 +84,10 @@ describe("MCP Server Integration", () => {
     delete process.env.GITHUB_TOKEN;
     delete process.env.GH_TOKEN;
     delete process.env.GH_ATTACH_COOKIES;
+
+    origStatePath = process.env.GH_ATTACH_STATE_PATH;
+    sessionDir = join(tmpDir, `gh-attach-mcp-state-${randomUUID()}`);
+    process.env.GH_ATTACH_STATE_PATH = join(sessionDir, "session.json");
   });
 
   afterEach(() => {
@@ -92,6 +98,19 @@ describe("MCP Server Integration", () => {
         // File may not exist
       }
     }
+
+    try {
+      rmSync(sessionDir, { recursive: true, force: true });
+    } catch {
+      // ignore
+    }
+
+    if (origStatePath) {
+      process.env.GH_ATTACH_STATE_PATH = origStatePath;
+    } else {
+      delete process.env.GH_ATTACH_STATE_PATH;
+    }
+
     vi.clearAllMocks();
   });
 

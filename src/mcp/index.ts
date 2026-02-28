@@ -23,6 +23,7 @@ import {
   createCookieExtractionStrategy,
   createRepoBranchStrategy,
 } from "../core/strategies/index.js";
+import { getSessionCookies, loadSession } from "../core/session.js";
 import { parseTarget } from "../core/target.js";
 import { validateFile } from "../core/validation.js";
 import { upload } from "../core/upload.js";
@@ -558,7 +559,8 @@ async function handleLogin(): Promise<{ content: TextContent[] }> {
  */
 async function handleCheckAuth(): Promise<{ content: TextContent[] }> {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-  const cookies = process.env.GH_ATTACH_COOKIES;
+  const cookies =
+    process.env.GH_ATTACH_COOKIES ?? getSessionCookies(loadSession());
 
   const strategies: string[] = [];
   if (token) {
@@ -569,7 +571,7 @@ async function handleCheckAuth(): Promise<{ content: TextContent[] }> {
   }
   strategies.push("cookie-extraction");
 
-  const authenticated = token !== undefined || cookies !== undefined;
+  const authenticated = token !== undefined || cookies !== null;
 
   return {
     content: [
@@ -592,7 +594,8 @@ async function handleListStrategies(): Promise<{ content: TextContent[] }> {
   }> = [];
 
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-  const cookies = process.env.GH_ATTACH_COOKIES;
+  const cookies =
+    process.env.GH_ATTACH_COOKIES ?? getSessionCookies(loadSession());
 
   strategies.push({
     name: "release-asset",
@@ -603,7 +606,7 @@ async function handleListStrategies(): Promise<{ content: TextContent[] }> {
     name: "browser-session",
     available: !!cookies,
     description:
-      "Upload via saved browser session (requires GH_ATTACH_COOKIES)",
+      "Upload via saved browser session (requires GH_ATTACH_COOKIES or saved session state)",
   });
   strategies.push({
     name: "cookie-extraction",
@@ -632,7 +635,8 @@ async function handleListStrategies(): Promise<{ content: TextContent[] }> {
 function getStrategies(preferredStrategy?: string): UploadStrategy[] {
   const strategies: UploadStrategy[] = [];
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-  const cookies = process.env.GH_ATTACH_COOKIES;
+  const cookies =
+    process.env.GH_ATTACH_COOKIES ?? getSessionCookies(loadSession());
 
   if (preferredStrategy) {
     switch (preferredStrategy) {

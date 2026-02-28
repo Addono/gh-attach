@@ -4,6 +4,7 @@ import { writeFileSync, unlinkSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 import { uploadCommand } from "../../../src/cli/commands/upload.js";
+import { saveSession } from "../../../src/core/session.js";
 import {
   AuthenticationError,
   ValidationError,
@@ -15,10 +16,15 @@ const CLI_SOURCE_PATH = resolve(import.meta.dirname, "../../../src/cli/index.ts"
 describe("uploadCommand integration tests", () => {
   let testDir: string;
   let testFile: string;
+  let origStatePath: string | undefined;
 
   beforeEach(() => {
+    origStatePath = process.env.GH_ATTACH_STATE_PATH;
+
     testDir = join(tmpdir(), `gh-attach-test-${Date.now()}`);
     mkdirSync(testDir, { recursive: true });
+    process.env.GH_ATTACH_STATE_PATH = join(testDir, "session.json");
+
     testFile = join(testDir, "test-image.png");
     // Create a minimal PNG file (8x8 transparent PNG)
     const pngBuffer = Buffer.from([
@@ -54,6 +60,12 @@ describe("uploadCommand integration tests", () => {
       rmDir(testDir);
     } catch {
       // Ignore
+    }
+
+    if (origStatePath) {
+      process.env.GH_ATTACH_STATE_PATH = origStatePath;
+    } else {
+      delete process.env.GH_ATTACH_STATE_PATH;
     }
   });
 
@@ -295,6 +307,29 @@ describe("uploadCommand integration tests", () => {
           strategy: "browser-session",
         }),
       ).rejects.toThrow("is not available");
+    } finally {
+      if (origCookies) process.env.GH_ATTACH_COOKIES = origCookies;
+    }
+  });
+
+  it("should allow browser-session strategy when a saved session exists", async () => {
+    const origCookies = process.env.GH_ATTACH_COOKIES;
+    delete process.env.GH_ATTACH_COOKIES;
+
+    // Persist a session cookie string to the configured state path.
+    saveSession({
+      cookies: "user_session=abc123; logged_in=yes",
+      expires: Date.now() + 86400000,
+      username: "testuser",
+    });
+
+    try {
+      await expect(
+        uploadCommand([testFile], {
+          target: "owner/repo#42",
+          strategy: "browser-session",
+        }),
+      ).rejects.toThrow("Upload failed");
     } finally {
       if (origCookies) process.env.GH_ATTACH_COOKIES = origCookies;
     }

@@ -43,7 +43,12 @@ This plan lists prioritized tasks required to bring the implementation into full
       - Opens browser to GitHub login page
       - Waits for user authentication (detects user avatar selector)
       - Extracts session cookies (user_session, logged_in, etc.)
-      - Saves session with username and expiry to XDG-compliant state file
+      - Saves session with username and expiry to an XDG-compliant state file
+      - State path precedence: `--state-path` > `GH_ATTACH_STATE_PATH` > XDG default
+      - `login --status` reports status and sets exit code `2` via `process.exitCode` (no `process.exit`)
+    - Added shared session helpers in `src/core/session.ts` and wired them into:
+      - CLI upload (auto-uses saved session when `GH_ATTACH_COOKIES` is unset)
+      - MCP `check_auth` / `list_strategies` / strategy selection (auto-uses saved session)
 
 ## 6. MCP Server
 - **Task:** Implement MCP server with stdio and HTTP transports, tool registration, and all required tools (upload_image, login, check_auth, list_strategies). **[COMPLETE]**

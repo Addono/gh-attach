@@ -5,6 +5,7 @@ import { createReleaseAssetStrategy } from "../../core/strategies/releaseAsset.j
 import { createBrowserSessionStrategy } from "../../core/strategies/browserSession.js";
 import { createCookieExtractionStrategy } from "../../core/strategies/cookieExtraction.js";
 import { createRepoBranchStrategy } from "../../core/strategies/repoBranch.js";
+import { getSessionCookies, loadSession } from "../../core/session.js";
 import { parseTarget } from "../../core/target.js";
 import { validateFile } from "../../core/validation.js";
 import { upload } from "../../core/upload.js";
@@ -35,7 +36,8 @@ const DEFAULT_STRATEGY_ORDER = [
  */
 function createStrategy(name: string): UploadStrategy | null {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-  const cookies = process.env.GH_ATTACH_COOKIES;
+  const cookies =
+    process.env.GH_ATTACH_COOKIES ?? getSessionCookies(loadSession());
 
   switch (name) {
     case "browser-session":
@@ -145,7 +147,7 @@ export async function uploadCommand(files: string[], options: UploadOptions) {
 
   if (strategies.length === 0) {
     throw new Error(
-      "No authentication available. Set GITHUB_TOKEN (or GH_TOKEN) or GH_ATTACH_COOKIES",
+      "No authentication available. Set GITHUB_TOKEN (or GH_TOKEN), GH_ATTACH_COOKIES, or run 'gh-attach login' to save a browser session.",
     );
   }
 
