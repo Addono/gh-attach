@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { mkdtemp, mkdir, chmod, writeFile, readFile, stat, rm } from "node:fs/promises";
+
+type PackageJson = {
+  bin?: Record<string, string>;
+  files?: string[];
+};
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
@@ -16,6 +21,11 @@ describe("gh extension entrypoints", () => {
 
     const ghExtensionStat = await stat(join(root, "gh-extension"));
     expect((ghExtensionStat.mode & 0o111) !== 0).toBe(true);
+
+    const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as PackageJson;
+    expect(pkg.bin?.["gh-extension"]).toBe("gh-extension");
+    expect(pkg.files).toContain("gh-extension");
+    expect(pkg.files).toContain("gh-attach");
   });
 
   it("gh-attach prefers a local platform binary when present", async () => {

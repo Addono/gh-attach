@@ -6,7 +6,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "gh-attach": "dist/cli.js"
+    "gh-attach": "dist/cli.js",
+    "gh-extension": "gh-extension"
   },
   "exports": {
     ".": {
@@ -20,6 +21,8 @@
   },
   "files": [
     "dist",
+    "gh-attach",
+    "gh-extension",
     "README.md",
     "LICENSE"
   ],

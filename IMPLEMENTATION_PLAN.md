@@ -185,6 +185,7 @@ This plan lists prioritized tasks required to bring the implementation into full
     - Updated release workflow to build binaries before publishing.
     - Added a repo-root `gh-attach` executable (required by GitHub CLI extensions) that prefers a local platform binary in `bin/` and otherwise downloads the matching release asset.
     - Kept the OpenSpec-required `gh-extension` entry point, delegating it to `./gh-attach`.
+    - Ensured `gh-extension` and `gh-attach` are included in the npm package (`package.json` `bin` + `files`) so installs don’t miss required entry points.
 
 ## 15. MCP Streamable HTTP Transport Compliance
 - **Task:** Align HTTP transport with MCP Streamable HTTP spec (JSON-RPC POST to `/` + SSE GET/DELETE) and advertise `{ tools: {} }`. **[COMPLETE]**
