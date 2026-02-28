@@ -381,6 +381,17 @@ async function collectSourceEvidence(): Promise<string> {
               k.includes("typescript"),
           ),
         ),
+        dependencies: Object.fromEntries(
+          Object.entries(
+            (pkg.dependencies ?? {}) as Record<string, string>,
+          ).filter(
+            ([k]) =>
+              k.includes("mcp") ||
+              k.includes("octokit") ||
+              k.includes("commander") ||
+              k.includes("zod"),
+          ),
+        ),
       },
       null,
       2,
@@ -390,9 +401,33 @@ async function collectSourceEvidence(): Promise<string> {
     evidence.push(`=== package.json (key fields) ===\n(unreadable)`);
   }
 
-  // MCP login tool — shows elicitation flow implementation
-  const mcpIndex = await readSlice("src/mcp/index.ts", 2000);
-  evidence.push(`=== src/mcp/index.ts (first 2000 chars) ===\n${mcpIndex}`);
+  // MCP server — shows tool definitions, transports, and elicitation flow
+  const mcpIndex = await readSlice("src/mcp/index.ts", 3000);
+  evidence.push(`=== src/mcp/index.ts (first 3000 chars) ===\n${mcpIndex}`);
+
+  // Core library entry point — shows public API surface
+  const indexTs = await readSlice("src/index.ts", 2000);
+  evidence.push(`=== src/index.ts ===\n${indexTs}`);
+
+  // Core types — shows error hierarchy and strategy interface
+  const typesTs = await readSlice("src/core/types.ts", 3000);
+  evidence.push(`=== src/core/types.ts ===\n${typesTs}`);
+
+  // CLI entry point — shows command registration and global options
+  const cliIndex = await readSlice("src/cli/index.ts", 2500);
+  evidence.push(`=== src/cli/index.ts ===\n${cliIndex}`);
+
+  // Upload command — shows strategy selection, output formats, exit codes
+  const uploadCmd = await readSlice("src/cli/commands/upload.ts", 2500);
+  evidence.push(`=== src/cli/commands/upload.ts ===\n${uploadCmd}`);
+
+  // Vitest config — shows test projects, coverage thresholds
+  const vitestConfig = await readSlice("vitest.config.ts", 1500);
+  evidence.push(`=== vitest.config.ts ===\n${vitestConfig}`);
+
+  // tsconfig.json — shows strict TypeScript configuration
+  const tsconfig = await readSlice("tsconfig.json", 1000);
+  evidence.push(`=== tsconfig.json ===\n${tsconfig}`);
 
   // Key directory listings
   const srcListing = runCommand("find src/ -name '*.ts' | sort 2>&1");

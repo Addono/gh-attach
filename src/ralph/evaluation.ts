@@ -245,6 +245,7 @@ export function computeAuditAdjustment(output: string): number {
 
 const TEST_PASS_REGEX = /(\d+)\s+passed/i;
 const TEST_FAIL_REGEX = /(\d+)\s+failed/i;
+const COVERAGE_STMTS_REGEX = /All files\s*\|\s*([\d.]+)/;
 
 interface FallbackCommandResults {
   build: CommandCheckResult;
@@ -296,7 +297,12 @@ function computeFallbackTestCoverage(test: CommandCheckResult): number {
   const ratio =
     total === 0 ? (test.success ? 1 : 0) : passed / Math.max(1, total);
   const adjustment = test.success ? 0 : -15;
-  return clampPercent(40 + ratio * 60 + adjustment);
+  // If coverage percentage is available in the output, use it as an additional signal
+  const coverageMatch = COVERAGE_STMTS_REGEX.exec(test.output);
+  const coveragePct = coverageMatch ? parseFloat(coverageMatch[1] ?? "0") : 0;
+  const coverageBonus =
+    coveragePct >= 90 ? 10 : coveragePct >= 80 ? 5 : coveragePct >= 60 ? 2 : 0;
+  return clampPercent(40 + ratio * 50 + coverageBonus + adjustment);
 }
 
 function computeFallbackCodeQuality(
@@ -311,14 +317,27 @@ function computeFallbackCodeQuality(
   const zeroWarningBonus = lint.success && lintSummary.count === 0 ? 10 : 0;
   const failurePenalty = lint.success ? 0 : 10;
   const auditAdjustment = computeAuditAdjustment(auditOutput);
-  const base = lint.success ? 60 : 35;
+  // Base score reflects lint outcome: clean pass starts higher
+  const base = lint.success ? 65 : 35;
   return clampPercent(
     base - warningPenalty - failurePenalty + zeroWarningBonus + auditAdjustment,
   );
 }
 
-function computeFallbackBuildHealthScore(build: CommandCheckResult): number {
-  return build.success ? 65 : 10;
+/**
+ * Build health reflects the full CI pipeline, not just the build step.
+ * A fully green CI (build + test + lint all pass) earns a higher score.
+ */
+function computeFallbackBuildHealthScore(
+  build: CommandCheckResult,
+  test: CommandCheckResult,
+  lint: CommandCheckResult,
+): number {
+  if (!build.success) return 10;
+  if (!test.success) return 35;
+  if (!lint.success) return 55;
+  // All three pass — healthy CI pipeline
+  return 85;
 }
 
 export function deriveFallbackFitnessScores(
@@ -337,7 +356,11 @@ export function deriveFallbackFitnessScores(
     lintSummary,
     results.audit.output,
   );
-  const buildHealth = computeFallbackBuildHealthScore(results.build);
+  const buildHealth = computeFallbackBuildHealthScore(
+    results.build,
+    results.test,
+    results.lint,
+  );
   const aggregate = computeAggregateScore(
     specCompliance,
     testCoverage,

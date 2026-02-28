@@ -182,8 +182,46 @@ describe("deriveFallbackFitnessScores", () => {
   it("returns meaningful scores when CI passes with no warnings", () => {
     const scores = deriveFallbackFitnessScores(createBaseResults());
     expect(scores.aggregate).toBeGreaterThanOrEqual(88);
-    expect(scores.testCoverage).toBe(100);
-    expect(scores.buildHealth).toBe(65);
+    expect(scores.testCoverage).toBeGreaterThanOrEqual(90);
+    expect(scores.buildHealth).toBe(85);
+  });
+
+  it("scores buildHealth lower when tests fail but build passes", () => {
+    const results = {
+      ...createBaseResults(),
+      test: makeCommandResult({
+        success: false,
+        output: "Tests 0 passed 3 failed",
+      }),
+    };
+    const scores = deriveFallbackFitnessScores(results);
+    expect(scores.buildHealth).toBe(35);
+  });
+
+  it("scores buildHealth lower when lint fails but build and test pass", () => {
+    const results = {
+      ...createBaseResults(),
+      lint: makeCommandResult({ success: false, output: "5 errors" }),
+    };
+    const scores = deriveFallbackFitnessScores(results);
+    expect(scores.buildHealth).toBe(55);
+  });
+
+  it("uses coverage percentage for testCoverage bonus", () => {
+    const withCoverage = deriveFallbackFitnessScores({
+      ...createBaseResults(),
+      test: makeCommandResult({
+        output:
+          "Tests 100 passed\nAll files |   97.5 |   92.76 |    100 |   97.5 |",
+      }),
+    });
+    const withoutCoverage = deriveFallbackFitnessScores({
+      ...createBaseResults(),
+      test: makeCommandResult({ output: "Tests 100 passed" }),
+    });
+    expect(withCoverage.testCoverage).toBeGreaterThan(
+      withoutCoverage.testCoverage,
+    );
   });
 
   it("penalizes code quality for lint warnings across unique rules", () => {
