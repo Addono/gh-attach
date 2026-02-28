@@ -1,6 +1,12 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { parseTarget } from "../../../src/core/target.js";
 import { ValidationError } from "../../../src/core/types.js";
+import * as child_process from "child_process";
+
+// Mock child_process for getGitRemote tests
+vi.mock("child_process", () => ({
+  execSync: vi.fn(),
+}));
 
 describe("parseTarget", () => {
   afterEach(() => {
@@ -225,6 +231,125 @@ describe("parseTarget", () => {
       const result = parseTarget("owner/repo#pull/0");
       expect(result.type).toBe("pull");
       expect(result.number).toBe(0);
+    });
+  });
+
+  describe("getGitRemote (internal function via local ref parsing)", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("parses SSH git remote URL with .git suffix", () => {
+      (child_process.execSync as ReturnType<typeof vi.fn>).mockReturnValue(
+        "git@github.com:myowner/myrepo.git\n",
+      );
+
+      const result = parseTarget("#42");
+      expect(result).toEqual({
+        owner: "myowner",
+        repo: "myrepo",
+        type: "issue",
+        number: 42,
+      });
+    });
+
+    it("parses SSH git remote URL without .git suffix", () => {
+      (child_process.execSync as ReturnType<typeof vi.fn>).mockReturnValue(
+        "git@github.com:owner/repo\n",
+      );
+
+      const result = parseTarget("#42");
+      expect(result).toEqual({
+        owner: "owner",
+        repo: "repo",
+        type: "issue",
+        number: 42,
+      });
+    });
+
+    it("parses HTTPS git remote URL with .git suffix", () => {
+      (child_process.execSync as ReturnType<typeof vi.fn>).mockReturnValue(
+        "https://github.com/https-owner/https-repo.git\n",
+      );
+
+      const result = parseTarget("#42");
+      expect(result).toEqual({
+        owner: "https-owner",
+        repo: "https-repo",
+        type: "issue",
+        number: 42,
+      });
+    });
+
+    it("parses HTTPS git remote URL without .git suffix", () => {
+      (child_process.execSync as ReturnType<typeof vi.fn>).mockReturnValue(
+        "https://github.com/owner/repo\n",
+      );
+
+      const result = parseTarget("#42");
+      expect(result).toEqual({
+        owner: "owner",
+        repo: "repo",
+        type: "issue",
+        number: 42,
+      });
+    });
+
+    it("throws INVALID_TARGET when git remote command fails", () => {
+      (child_process.execSync as ReturnType<typeof vi.fn>).mockImplementation(
+        () => {
+          throw new Error("fatal: not a git repository");
+        },
+      );
+
+      expect(() => parseTarget("#42")).toThrow(ValidationError);
+      expect(() => parseTarget("#42")).toThrow(
+        "Could not infer repository from git remote",
+      );
+    });
+
+    it("throws INVALID_TARGET when git remote URL format is unrecognized", () => {
+      (child_process.execSync as ReturnType<typeof vi.fn>).mockReturnValue(
+        "https://gitlab.com/owner/repo.git\n",
+      );
+
+      expect(() => parseTarget("#42")).toThrow(ValidationError);
+      expect(() => parseTarget("#42")).toThrow(
+        "Could not infer repository from git remote",
+      );
+    });
+
+    it("handles git remote with hyphenated owner and repo", () => {
+      (child_process.execSync as ReturnType<typeof vi.fn>).mockReturnValue(
+        "git@github.com:my-org/my-cool-repo.git\n",
+      );
+
+      const result = parseTarget("#pull/123");
+      expect(result).toEqual({
+        owner: "my-org",
+        repo: "my-cool-repo",
+        type: "pull",
+        number: 123,
+      });
+    });
+
+    it("includes git_remote_not_found in error details when command fails", () => {
+      (child_process.execSync as ReturnType<typeof vi.fn>).mockImplementation(
+        () => {
+          throw new Error("fatal: not a git repository");
+        },
+      );
+
+      try {
+        parseTarget("#42");
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_TARGET");
+        expect((err as ValidationError).details?.reason).toBe(
+          "git_remote_not_found",
+        );
+      }
     });
   });
 });
