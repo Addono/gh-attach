@@ -2,15 +2,26 @@
   "maxIterations": 50,
   "evaluationInterval": 5,
   "models": [
+    "gpt-4.1",
     "gpt-5.1-codex-mini",
     "gpt-5.1-codex",
-    "gpt-4.1",
-    "claude-sonnet-4",
     "claude-haiku-4.5",
-    "claude-sonnet-4.5"
+    "claude-sonnet-4.5",
+    "claude-sonnet-4.6",
+    "gemini-3-pro-preview"
   ],
+  "premiumModels": [
+    "claude-opus-4.5",
+    "claude-opus-4.6",
+    "claude-opus-4.6-fast",
+    "gpt-5.1",
+    "gpt-5.2",
+    "gpt-5.1-codex-max",
+    "gpt-5.3-codex"
+  ],
+  "stallWindow": 2,
+  "stallThreshold": 5,
   "evaluationModel": "claude-haiku-4.5",
   "trackingRepo": "Addono/github-attach",
-  "timeout": 600000,
-  "trackingIssueNumber": 1
+  "timeout": 600000
 }
