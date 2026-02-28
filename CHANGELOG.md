@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/Addono/github-attach/compare/v1.0.3...v1.0.4) (2026-02-28)
+
+
+### Bug Fixes
+
+* disable coverage thresholds for E2E test runs ([795e3c7](https://github.com/Addono/github-attach/commit/795e3c70ac0fbb5660f76829eec768df221b2fe3))
+
 ## [1.0.3](https://github.com/Addono/github-attach/compare/v1.0.2...v1.0.3) (2026-02-28)
 
 
