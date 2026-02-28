@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { spawnSync } from "child_process";
 import { writeFileSync, unlinkSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
-import { join } from "path";
+import { join, resolve } from "path";
 import { uploadCommand } from "../../../src/cli/commands/upload.js";
 import {
   AuthenticationError,
   ValidationError,
   UploadError,
 } from "../../../src/core/types.js";
+
+const CLI_SOURCE_PATH = resolve(import.meta.dirname, "../../../src/cli/index.ts");
 
 describe("uploadCommand integration tests", () => {
   let testDir: string;
@@ -127,6 +130,44 @@ describe("uploadCommand integration tests", () => {
         // No filename provided
       }),
     ).rejects.toThrow("--filename is required");
+  });
+
+  it("should allow stdin mode with no file arguments", () => {
+    const result = spawnSync(
+      "node",
+      [
+        "--import",
+        "tsx",
+        CLI_SOURCE_PATH,
+        "upload",
+        "--stdin",
+        "--target",
+        "owner/repo#42",
+      ],
+      {
+        encoding: "utf8",
+        cwd: resolve(import.meta.dirname, "../../.."),
+        env: { ...process.env, GITHUB_TOKEN: "test-token" },
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("--filename is required when using --stdin");
+  });
+
+  it("should require a file argument when stdin mode is disabled", () => {
+    const result = spawnSync(
+      "node",
+      ["--import", "tsx", CLI_SOURCE_PATH, "upload", "--target", "owner/repo#42"],
+      {
+        encoding: "utf8",
+        cwd: resolve(import.meta.dirname, "../../.."),
+        env: { ...process.env, GITHUB_TOKEN: "test-token" },
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("At least one file is required");
   });
 
   it("should parse target in shorthand format", async () => {

@@ -77,6 +77,12 @@ export async function uploadCommand(files: string[], options: UploadOptions) {
     files = [tempFile];
   }
 
+  if (files.length === 0) {
+    throw new Error(
+      "At least one file is required. Use --stdin with --filename to read from stdin.",
+    );
+  }
+
   // Resolve target: CLI option > config > error
   let targetRef = options.target;
   if (!targetRef) {

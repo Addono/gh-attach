@@ -65,7 +65,7 @@ program
 program
   .command("upload")
   .description("Upload an image and get a markdown embed URL")
-  .argument("<files...>", "Image file(s) to upload")
+  .argument("[files...]", "Image file(s) to upload")
   .option(
     "--target <ref>",
     "GitHub issue/PR reference (owner/repo#N, #N, or URL)",
