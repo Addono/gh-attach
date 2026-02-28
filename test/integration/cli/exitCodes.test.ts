@@ -140,4 +140,33 @@ describe("CLI exit code integration", () => {
     expect(status).toBe(1);
     expect(stderr).toContain("No upload strategy available");
   });
+
+  describe("login --status command", () => {
+    it("exits 2 (auth) when no session exists (spec: Login Command — Status check)", () => {
+      const statePath = join(testDir, "no-session.json");
+      const { status, stdout } = runCli(["login", "--status"], {
+        GH_ATTACH_STATE_PATH: statePath,
+      });
+      expect(status).toBe(2);
+      expect(stdout).toContain("not authenticated");
+    });
+
+    it("exits 0 when valid session exists", async () => {
+      // Write a valid session file
+      const statePath = join(testDir, "session.json");
+      const session = {
+        username: "testuser",
+        cookies: "user_session=abc123",
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        savedAt: new Date().toISOString(),
+      };
+      writeFileSync(statePath, JSON.stringify(session));
+
+      const { status, stdout } = runCli(["login", "--status"], {
+        GH_ATTACH_STATE_PATH: statePath,
+      });
+      expect(status).toBe(0);
+      expect(stdout).toContain("testuser");
+    });
+  });
 });

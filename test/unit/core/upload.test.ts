@@ -61,4 +61,49 @@ describe("upload", () => {
     const result = await upload("screenshot.png", mockTarget, strategies);
     expect(result.markdown).toContain("![screenshot.png]");
   });
+
+  describe("spec compliance — strategy selection and fallback", () => {
+    it("tries strategies in order and uses first available (automatic fallback)", async () => {
+      const s1 = createMockStrategy("browser-session", false);
+      const s2 = createMockStrategy("cookie-extraction", false);
+      const s3 = createMockStrategy(
+        "release-asset",
+        true,
+        "https://release.github.com/img.png",
+      );
+      const s4 = createMockStrategy("repo-branch", true);
+
+      const result = await upload("test.png", mockTarget, [s1, s2, s3, s4]);
+      // Should use s3 (first available), not s4
+      expect(result.strategy).toBe("release-asset");
+    });
+
+    it("throws NoStrategyAvailableError listing all tried strategies when all are unavailable", async () => {
+      const strategies = [
+        createMockStrategy("browser-session", false),
+        createMockStrategy("cookie-extraction", false),
+        createMockStrategy("release-asset", false),
+        createMockStrategy("repo-branch", false),
+      ];
+
+      const error = await upload("test.png", mockTarget, strategies).catch(
+        (e) => e,
+      );
+      expect(error).toBeInstanceOf(NoStrategyAvailableError);
+      // details.tried lists each strategy name with its reason
+      const tried = (error.details as { tried: string[] }).tried;
+      expect(tried.some((t: string) => t.startsWith("browser-session"))).toBe(
+        true,
+      );
+      expect(tried.some((t: string) => t.startsWith("release-asset"))).toBe(
+        true,
+      );
+      expect(tried).toHaveLength(4);
+    });
+
+    it("uses empty strategies list to trigger NoStrategyAvailableError (fallback exhaustion)", async () => {
+      const error = await upload("test.png", mockTarget, []).catch((e) => e);
+      expect(error).toBeInstanceOf(NoStrategyAvailableError);
+    });
+  });
 });

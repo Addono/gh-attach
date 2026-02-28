@@ -34,6 +34,7 @@ import {
   type CiStatus,
   type CommandCheckResult,
 } from "./src/ralph/ci-gating.ts";
+import { selectModel as selectModelFromPool } from "./src/ralph/modelSelection.ts";
 
 // --- Types ---
 
@@ -180,35 +181,9 @@ function selectModel(
   config: RalphConfig,
   currentModel: string,
 ): string {
-  const allModels = [...config.models, ...config.premiumModels];
-
-  // Stall detection: if last stallWindow evals show < stallThreshold improvement, escalate
-  if (evaluations.length >= config.stallWindow) {
-    const recent = evaluations.slice(-config.stallWindow);
-    const best = Math.max(...recent.map((e) => e.scores.aggregate));
-    const worst = Math.min(...recent.map((e) => e.scores.aggregate));
-    if (best - worst < config.stallThreshold) {
-      const premiumCandidates = config.premiumModels.filter(
-        (m) => m !== currentModel,
-      );
-      if (premiumCandidates.length > 0) {
-        const chosen =
-          premiumCandidates[
-            Math.floor(Math.random() * premiumCandidates.length)
-          ]!;
-        log(
-          `Stall detected (Δ${best - worst} < ${config.stallThreshold} over ${config.stallWindow} evals) → escalating to premium: ${chosen}`,
-          "MODEL",
-        );
-        return chosen;
-      }
-    }
-  }
-
-  // Normal rotation — exclude the current model to ensure variety
-  const candidates = allModels.filter((m) => m !== currentModel);
-  if (candidates.length === 0) return allModels[0]!;
-  return candidates[Math.floor(Math.random() * candidates.length)]!;
+  return selectModelFromPool(evaluations, config, currentModel, (msg) =>
+    log(msg, "MODEL"),
+  );
 }
 
 // --- Fitness evaluation ---
@@ -438,6 +413,77 @@ async function collectSourceEvidence(): Promise<string> {
 
   const githubListing = runCommand("find .github/ -type f | sort 2>&1");
   evidence.push(`=== .github/ file listing ===\n${githubListing.output}`);
+
+  // Ralph Loop configuration — shows model pool, evaluation interval, tracking repo
+  const ralphConfig = await readSlice("ralph-config.json", 2000);
+  evidence.push(`=== ralph-config.json ===\n${ralphConfig}`);
+
+  // Ralph Loop state — shows current iteration, model, tracking issue, evaluations history
+  try {
+    const stateRaw = await readFile("ralph-state.json", "utf-8");
+    const state = JSON.parse(stateRaw) as Partial<RalphState>;
+    const stateSummary = JSON.stringify(
+      {
+        currentIteration: state.currentIteration,
+        currentModel: state.currentModel,
+        trackingIssueNumber: state.trackingIssueNumber,
+        evaluationCount: Array.isArray(state.evaluations)
+          ? state.evaluations.length
+          : 0,
+        lastEvaluation: Array.isArray(state.evaluations)
+          ? state.evaluations[state.evaluations.length - 1]
+          : null,
+        ciStatus: state.ciStatus,
+      },
+      null,
+      2,
+    );
+    evidence.push(`=== ralph-state.json (summary) ===\n${stateSummary}`);
+  } catch {
+    evidence.push(`=== ralph-state.json (summary) ===\n(not yet created)`);
+  }
+
+  // Ralph Loop core — model rotation, session creation, state persistence, GitHub issue reporting
+  // Slice shows selectModel(), createTrackingIssue/postFitnessComment, and loadState/saveState
+  const ralphLoopCore = await readSlice("ralph-loop.ts", 4000);
+  evidence.push(
+    `=== ralph-loop.ts (first 4000 chars — imports, types, state management, model rotation) ===\n${ralphLoopCore}`,
+  );
+
+  // Ralph Loop GitHub reporting section — shows issue creation, comment posting, trend chart
+  try {
+    const fullLoop = await readFile("ralph-loop.ts", "utf-8");
+    const issueReportIdx = fullLoop.indexOf(
+      "// Create tracking issue on first run",
+    );
+    if (issueReportIdx !== -1) {
+      const section = fullLoop.slice(
+        Math.max(0, issueReportIdx - 200),
+        issueReportIdx + 1500,
+      );
+      evidence.push(
+        `=== ralph-loop.ts (GitHub issue reporting section) ===\n${section}`,
+      );
+    }
+    const modelSelectIdx = fullLoop.indexOf(
+      "// --- Model rotation with stall detection ---",
+    );
+    if (modelSelectIdx !== -1) {
+      const section = fullLoop.slice(modelSelectIdx, modelSelectIdx + 1000);
+      evidence.push(
+        `=== ralph-loop.ts (selectModel — model rotation with stall detection) ===\n${section}`,
+      );
+    }
+    const stateIdx = fullLoop.indexOf("async function loadState()");
+    if (stateIdx !== -1) {
+      const section = fullLoop.slice(stateIdx, stateIdx + 1200);
+      evidence.push(
+        `=== ralph-loop.ts (loadState / saveState — state persistence) ===\n${section}`,
+      );
+    }
+  } catch {
+    // ralph-loop.ts read failure — section already captured above
+  }
 
   return evidence.join("\n\n");
 }

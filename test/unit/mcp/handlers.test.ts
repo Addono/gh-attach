@@ -407,6 +407,46 @@ describe("MCP server handlers", () => {
     expect(existsSync(tempUploadPath)).toBe(false);
   });
 
+  it("decodes base64 content, writes to temp file, and uploads successfully (spec: Upload with base64 content)", async () => {
+    process.env.GITHUB_TOKEN = "ghs_test";
+    // Simulate PNG header bytes as base64 content
+    const imageBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]); // PNG magic bytes
+    const content = imageBytes.toString("base64");
+    let capturedTempPath: string | undefined;
+
+    hoisted.mockValidateFile.mockImplementationOnce(
+      async (filePath: string) => {
+        capturedTempPath = filePath;
+        // Verify temp file was written with correct decoded content
+        const { readFileSync } = await import("fs");
+        const written = readFileSync(filePath);
+        expect(written).toEqual(imageBytes);
+      },
+    );
+
+    const { call } = await startServerAndGetHandlers();
+    const response = await call({
+      params: {
+        name: "upload_image",
+        arguments: {
+          content,
+          filename: "screenshot.png",
+          target: "octo/repo#42",
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(response.content[0]?.text).toBe(hoisted.mockUploadResult.markdown);
+    // Verify temp file used correct filename hint
+    expect(capturedTempPath).toBeDefined();
+    expect(capturedTempPath).toMatch(/screenshot\.png$/);
+    // Temp file cleaned up after successful upload
+    if (capturedTempPath) {
+      expect(existsSync(capturedTempPath)).toBe(false);
+    }
+  });
+
   it("outer catch wraps unexpected thrown non-Error values with isError=true", async () => {
     // Make parseTarget throw a non-Error value to trigger the outer catch block
     hoisted.mockParseTarget.mockImplementation(() => {

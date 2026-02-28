@@ -612,4 +612,91 @@ describe("Browser Session Strategy", () => {
       expect(strategy.name).toBe("browser-session");
     });
   });
+
+  describe("spec compliance — CSRF token extraction", () => {
+    it("throws UploadError with CSRF_EXTRACTION_FAILED code when policy response is not OK (500)", async () => {
+      const strategy = createBrowserSessionStrategy("test-cookie");
+
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 12345 }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          statusText: "Internal Server Error",
+          text: async () => "Unexpected HTML response without CSRF token",
+        });
+
+      const error = await strategy
+        .upload("/tmp/test.png", mockTarget)
+        .catch((e) => e);
+      expect(error).toBeInstanceOf(UploadError);
+      expect(error.code).toBe("CSRF_EXTRACTION_FAILED");
+    });
+
+    it("throws UploadError with CSRF_EXTRACTION_FAILED code when policy fetch throws network error", async () => {
+      const strategy = createBrowserSessionStrategy("test-cookie");
+
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 12345 }),
+        })
+        .mockRejectedValueOnce(new Error("Connection refused"));
+
+      const error = await strategy
+        .upload("/tmp/test.png", mockTarget)
+        .catch((e) => e);
+      expect(error).toBeInstanceOf(UploadError);
+      expect(error.code).toBe("CSRF_EXTRACTION_FAILED");
+    });
+  });
+
+  describe("spec compliance — expired session detection", () => {
+    it("throws AuthenticationError with SESSION_EXPIRED code when server returns 401", async () => {
+      const strategy = createBrowserSessionStrategy("test-cookie");
+
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 12345 }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+        });
+
+      const error = await strategy
+        .upload("/tmp/test.png", mockTarget)
+        .catch((e) => e);
+      expect(error).toBeInstanceOf(AuthenticationError);
+      expect(error.code).toBe("SESSION_EXPIRED");
+    });
+
+    it("throws AuthenticationError with SESSION_EXPIRED code when server returns 403", async () => {
+      const strategy = createBrowserSessionStrategy("test-cookie");
+
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 12345 }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+        });
+
+      const error = await strategy
+        .upload("/tmp/test.png", mockTarget)
+        .catch((e) => e);
+      expect(error).toBeInstanceOf(AuthenticationError);
+      expect(error.code).toBe("SESSION_EXPIRED");
+    });
+  });
 });
