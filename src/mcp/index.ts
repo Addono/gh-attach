@@ -58,7 +58,10 @@ let elicitedToken: string | null = null;
  */
 function getEffectiveToken(): string | undefined {
   return (
-    process.env.GITHUB_TOKEN || process.env.GH_TOKEN || elicitedToken || undefined
+    process.env.GITHUB_TOKEN ||
+    process.env.GH_TOKEN ||
+    elicitedToken ||
+    undefined
   );
 }
 

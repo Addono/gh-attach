@@ -204,7 +204,9 @@ export function parseAuditSeverities(output: string): AuditSeverityCounts {
   let matchedPrefix = false;
   while (match) {
     matchedPrefix = true;
-    const level = match[2]?.toLowerCase() as keyof AuditSeverityCounts | undefined;
+    const level = match[2]?.toLowerCase() as
+      | keyof AuditSeverityCounts
+      | undefined;
     const value = Number(match[1]) || 0;
     if (level) counts[level] += value;
     match = prefixRegex.exec(output);
@@ -214,7 +216,9 @@ export function parseAuditSeverities(output: string): AuditSeverityCounts {
     const suffixRegex = /(critical|high|moderate|low)[^\d]*(\d+)/gi;
     match = suffixRegex.exec(output);
     while (match) {
-      const level = match[1]?.toLowerCase() as keyof AuditSeverityCounts | undefined;
+      const level = match[1]?.toLowerCase() as
+        | keyof AuditSeverityCounts
+        | undefined;
       const value = Number(match[2]) || 0;
       if (level) counts[level] += value;
       match = suffixRegex.exec(output);
@@ -233,9 +237,7 @@ const VULNERABILITY_ZERO_REGEX = /found\s+0\s+vulnerabilities/i;
 export function computeAuditAdjustment(output: string): number {
   const counts = parseAuditSeverities(output);
   const penalty =
-    counts.critical * 10 +
-    counts.high * 5 +
-    (counts.moderate + counts.low) * 1;
+    counts.critical * 10 + counts.high * 5 + (counts.moderate + counts.low) * 1;
   const cappedPenalty = Math.min(penalty, 50);
   const bonus = VULNERABILITY_ZERO_REGEX.test(output) ? 5 : 0;
   return bonus - cappedPenalty;
@@ -306,8 +308,7 @@ function computeFallbackCodeQuality(
     30,
     Math.floor(lintSummary.uniqueRules / 5) * 10,
   );
-  const zeroWarningBonus =
-    lint.success && lintSummary.count === 0 ? 10 : 0;
+  const zeroWarningBonus = lint.success && lintSummary.count === 0 ? 10 : 0;
   const failurePenalty = lint.success ? 0 : 10;
   const auditAdjustment = computeAuditAdjustment(auditOutput);
   const base = lint.success ? 60 : 35;

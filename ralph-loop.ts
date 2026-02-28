@@ -323,7 +323,8 @@ async function collectSourceEvidence(): Promise<string> {
     try {
       const content = await readFile(path, "utf-8");
       return content.length > maxChars
-        ? content.slice(0, maxChars) + `\n... (truncated, total ${content.length} chars)`
+        ? content.slice(0, maxChars) +
+            `\n... (truncated, total ${content.length} chars)`
         : content;
     } catch {
       return "(file not found)";
@@ -334,12 +335,17 @@ async function collectSourceEvidence(): Promise<string> {
   const ciWorkflow = await readSlice(".github/workflows/ci.yml", 3000);
   evidence.push(`=== .github/workflows/ci.yml ===\n${ciWorkflow}`);
 
-  const releaseWorkflow = await readSlice(".github/workflows/release.yml", 2000);
+  const releaseWorkflow = await readSlice(
+    ".github/workflows/release.yml",
+    2000,
+  );
   evidence.push(`=== .github/workflows/release.yml ===\n${releaseWorkflow}`);
 
   // Semantic release configuration
   const releasercExists = existsSync(".releaserc.json");
-  const releaserc = releasercExists ? await readSlice(".releaserc.json") : "(not found)";
+  const releaserc = releasercExists
+    ? await readSlice(".releaserc.json")
+    : "(not found)";
   evidence.push(`=== .releaserc.json ===\n${releaserc}`);
 
   // Dependabot configuration
@@ -367,7 +373,13 @@ async function collectSourceEvidence(): Promise<string> {
         devDependencies: Object.fromEntries(
           Object.entries(
             (pkg.devDependencies ?? {}) as Record<string, string>,
-          ).filter(([k]) => k.includes("semantic") || k.includes("release") || k.includes("vitest") || k.includes("typescript")),
+          ).filter(
+            ([k]) =>
+              k.includes("semantic") ||
+              k.includes("release") ||
+              k.includes("vitest") ||
+              k.includes("typescript"),
+          ),
         ),
       },
       null,
@@ -420,13 +432,14 @@ async function evaluateFitness(
     "EVAL",
   );
   // Extract test pass/fail summary from test output
-  const testSummary = testResult.output.match(/Tests\s+(\d+)\s+passed.*?(?:(\d+)\s+failed)?/)?.[0] ?? (testResult.success ? "passed" : "failed");
+  const testSummary =
+    testResult.output.match(
+      /Tests\s+(\d+)\s+passed.*?(?:(\d+)\s+failed)?/,
+    )?.[0] ?? (testResult.success ? "passed" : "failed");
   log(`[Evaluation] Tests: ${testSummary}`, "EVAL");
   // Extract lint error/warning counts from lint output
-  const lintErrors =
-    lintResult.output.match(/(\d+)\s+error/)?.[1] ?? "0";
-  const lintWarnings =
-    lintResult.output.match(/(\d+)\s+warning/)?.[1] ?? "0";
+  const lintErrors = lintResult.output.match(/(\d+)\s+error/)?.[1] ?? "0";
+  const lintWarnings = lintResult.output.match(/(\d+)\s+warning/)?.[1] ?? "0";
   log(
     `[Evaluation] Lint: ${lintErrors} errors, ${lintWarnings} warnings`,
     "EVAL",
@@ -976,10 +989,19 @@ async function ralphLoop(mode: Mode, maxIterationsOverride?: number) {
           toolStartTimes.set(event.data.toolCallId, Date.now());
           const category = getToolCategory(name);
           const detail = formatToolArgs(name, event.data.arguments);
-          log(`⚙ ${name} (${category})${detail ? ` — ${detail}` : ""}`, "DEBUG");
+          log(
+            `⚙ ${name} (${category})${detail ? ` — ${detail}` : ""}`,
+            "DEBUG",
+          );
           // Model Reasoning Logging: track intent changes via report_intent tool calls
-          if (name === "report_intent" && typeof (event.data.arguments as Record<string, unknown>)?.intent === "string") {
-            const newIntent = String((event.data.arguments as Record<string, unknown>).intent).trim();
+          if (
+            name === "report_intent" &&
+            typeof (event.data.arguments as Record<string, unknown>)?.intent ===
+              "string"
+          ) {
+            const newIntent = String(
+              (event.data.arguments as Record<string, unknown>).intent,
+            ).trim();
             if (newIntent && newIntent !== currentIntent) {
               if (currentIntent !== null) {
                 log(`[Intent] Previous: ${currentIntent}`, "DEBUG");

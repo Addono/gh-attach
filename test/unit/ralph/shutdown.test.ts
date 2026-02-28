@@ -43,10 +43,7 @@ describe("registerShutdownHandler", () => {
     );
 
     process.emit("SIGINT");
-    expect(log).toHaveBeenCalledWith(
-      expect.stringContaining("SIGINT"),
-      "WARN",
-    );
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("SIGINT"), "WARN");
 
     remove();
   });

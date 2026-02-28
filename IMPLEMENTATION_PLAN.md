@@ -367,9 +367,6 @@ This plan lists prioritized tasks required to bring the implementation into full
     - Added always-running gating test in E2E suite that emits a clear log message when E2E_TESTS is not set, fulfilling the spec requirement for "skipped with a clear message".
     - All validation passes: `typecheck`, `lint`, `test` (367 tests), `npm audit --production` (0 vulnerabilities).
 
-
-
-
 ## 26. Evaluation Evidence and Branch Protection Documentation
 
 - **Task:** Improve fitness evaluation evidence quality and expand branch protection documentation. **[COMPLETE]**
@@ -478,3 +475,23 @@ This plan lists prioritized tasks required to bring the implementation into full
     - Excluded root-level files (ralph-loop.ts, commitlint.config.js) from coverage reporting.
     - MCP branch coverage improved from 85% to 90%.
     - All validation passes: `typecheck`, `lint` (0 errors), `test` (396 tests), `npm audit --production` (0 vulnerabilities).
+
+## 32. Formatting Fix, Coverage Configuration, and CLI Error Handler Tests
+
+- **Task:** Fix prettier formatting failures, restructure coverage configuration to merge unit+integration coverage, and add CLI action error handler tests. **[COMPLETE]**
+  - **Spec:** CI-CD/spec.md (Lint Stage — Prettier check), Testing/spec.md (Unit Test Coverage ≥90%), CLI/spec.md (Exit Codes)
+  - **Files:** vitest.config.ts, test/unit/cli/actionErrors.test.ts (new), all formatted files
+  - **Tests:** 10 new tests (CLI action error handlers for upload, login, config, mcp commands)
+  - **Dependencies:** None
+  - **Notes:**
+    - **Targets Build Health (50/100), Test Coverage (30/100), Code Quality (10/100)** from Score-Maximisation Context.
+    - **Fixed `npm run format:check` failure**: 11 files had Prettier formatting issues. `format:check` was exiting with code 1, which directly breaks CI per CI-CD/spec.md Lint Stage requirement. Now passes cleanly.
+    - **Restructured coverage configuration**: Moved coverage settings from unit-project-level to top-level `test.coverage` in vitest.config.ts so coverage is collected across both unit AND integration tests. This properly accounts for MCP HTTP transport integration tests.
+    - **Coverage improvements**:
+      - Overall: 68.89% → 95.68% statements
+      - CLI index.ts: 63.35% → 96.94% (new action error handler tests)
+      - MCP index.ts: 67.58% → 88.85% (integration test coverage now merged)
+      - Root-level files (ralph-loop.ts, commitlint.config.js) no longer appear in coverage report
+    - **New CLI action error handler tests**: Tests the catch blocks in all four command actions (upload, login, config, mcp) by invoking Commander's `_actionHandler` directly. Covers both Error and non-Error thrown values, and verifies correct exit code mapping per CLI/spec.md.
+    - **Raised coverage thresholds** to lines/statements 75%, functions 85%, branches 78%.
+    - All validation passes: `typecheck`, `lint` (0 errors), `format:check`, `build`, `test` (406 tests), `npm audit --production` (0 vulnerabilities).

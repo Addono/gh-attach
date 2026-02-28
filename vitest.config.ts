@@ -2,30 +2,33 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    coverage: {
+      enabled: true,
+      provider: "v8",
+      reporter: ["text", "html", "json", "lcov"],
+      include: ["src/**/*.ts"],
+      exclude: [
+        "src/**/*.d.ts",
+        "src/ralph/**",
+        "ralph-loop.ts",
+        "commitlint.config.js",
+        "**/ralph-loop.ts",
+        "**/commitlint.config.js",
+        "**/*.config.js",
+      ],
+      thresholds: {
+        lines: 75,
+        functions: 85,
+        branches: 78,
+        statements: 75,
+      },
+    },
     projects: [
       {
         test: {
           name: "unit",
           include: ["test/unit/**/*.test.ts"],
           environment: "node",
-          coverage: {
-            enabled: true,
-            provider: "v8",
-            reporter: ["text", "html", "json", "lcov"],
-            include: ["src/**/*.ts"],
-            exclude: [
-              "src/**/*.d.ts",
-              "src/ralph/**",
-              "ralph-loop.ts",
-              "commitlint.config.js",
-            ],
-            thresholds: {
-              lines: 68,
-              functions: 80,
-              branches: 75,
-              statements: 68,
-            },
-          },
         },
       },
       {

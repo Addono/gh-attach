@@ -121,16 +121,16 @@ npm run lint        # ESLint
 
 For production repositories, configure the following protections on the `main` branch via **Settings → Branches → Branch protection rules**:
 
-| Setting | Value |
-|---------|-------|
-| **Require a pull request before merging** | ✅ enabled |
-| **Require approvals** | 1 review |
-| **Require status checks to pass** | ✅ enabled |
-| **Required status checks** | `Lint & Format`, `Typecheck`, `Build`, `Test (Node 22, ubuntu-latest)` |
-| **Require branches to be up to date** | ✅ enabled |
-| **Require conversation resolution** | ✅ enabled |
-| **Require linear history** | ✅ enabled |
-| **Do not allow bypassing the above settings** | ✅ enabled |
+| Setting                                       | Value                                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------------- |
+| **Require a pull request before merging**     | ✅ enabled                                                             |
+| **Require approvals**                         | 1 review                                                               |
+| **Require status checks to pass**             | ✅ enabled                                                             |
+| **Required status checks**                    | `Lint & Format`, `Typecheck`, `Build`, `Test (Node 22, ubuntu-latest)` |
+| **Require branches to be up to date**         | ✅ enabled                                                             |
+| **Require conversation resolution**           | ✅ enabled                                                             |
+| **Require linear history**                    | ✅ enabled                                                             |
+| **Do not allow bypassing the above settings** | ✅ enabled                                                             |
 
 To configure via the GitHub CLI:
 

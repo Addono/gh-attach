@@ -93,9 +93,7 @@ export function formatToolArgs(toolName: string, args: unknown): string {
     case "grep":
     case "grep_search":
     case "rg": {
-      const pattern = String(
-        a.query ?? a.pattern ?? a.regex ?? a.search ?? "",
-      );
+      const pattern = String(a.query ?? a.pattern ?? a.regex ?? a.search ?? "");
       const path = a.path ?? a.directory ?? a.glob ?? "";
       return pattern
         ? `"${pattern}"${path ? ` in ${path}` : ""}`

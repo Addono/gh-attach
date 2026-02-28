@@ -250,9 +250,7 @@ describe("isEvaluationPayloadSuspicious", () => {
       buildHealth: 70,
       aggregate: 0,
     };
-    expect(
-      isEvaluationPayloadSuspicious(parsed, fallback),
-    ).toBe(true);
+    expect(isEvaluationPayloadSuspicious(parsed, fallback)).toBe(true);
   });
 
   it("flags zero spec compliance when fallback indicates coverage", () => {
@@ -263,9 +261,7 @@ describe("isEvaluationPayloadSuspicious", () => {
       buildHealth: 60,
       aggregate: 50,
     };
-    expect(
-      isEvaluationPayloadSuspicious(parsed, fallback),
-    ).toBe(true);
+    expect(isEvaluationPayloadSuspicious(parsed, fallback)).toBe(true);
   });
 
   it("ignores reasonable scores", () => {
@@ -276,8 +272,6 @@ describe("isEvaluationPayloadSuspicious", () => {
       buildHealth: 20,
       aggregate: 30,
     };
-    expect(
-      isEvaluationPayloadSuspicious(parsed, fallback),
-    ).toBe(false);
+    expect(isEvaluationPayloadSuspicious(parsed, fallback)).toBe(false);
   });
 });

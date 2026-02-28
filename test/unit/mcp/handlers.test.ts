@@ -24,8 +24,12 @@ const hoisted = vi.hoisted(() => ({
   callToolHandler: undefined as CallToolHandler | undefined,
   listToolsHandler: undefined as ListToolsHandler | undefined,
   mockServerConnect: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-  mockServerGetClientCapabilities: vi.fn<() => Record<string, unknown>>().mockReturnValue({}),
-  mockServerElicitInput: vi.fn<() => Promise<unknown>>().mockResolvedValue({ action: "cancel" }),
+  mockServerGetClientCapabilities: vi
+    .fn<() => Record<string, unknown>>()
+    .mockReturnValue({}),
+  mockServerElicitInput: vi
+    .fn<() => Promise<unknown>>()
+    .mockResolvedValue({ action: "cancel" }),
   mockServerSetRequestHandler: vi.fn((schema: unknown, handler: unknown) => {
     if (schema === hoisted.callToolSchema) {
       hoisted.callToolHandler = handler as CallToolHandler;
@@ -537,7 +541,9 @@ describe("MCP server handlers", () => {
 
   it("login tool uses elicitation when client supports it and user accepts", async () => {
     // Simulate client that supports form elicitation
-    hoisted.mockServerGetClientCapabilities.mockReturnValue({ elicitation: { form: true } });
+    hoisted.mockServerGetClientCapabilities.mockReturnValue({
+      elicitation: { form: true },
+    });
     hoisted.mockServerElicitInput.mockResolvedValue({
       action: "accept",
       content: { token: "ghs_elicited_token" },
@@ -551,7 +557,9 @@ describe("MCP server handlers", () => {
   });
 
   it("login tool handles elicitation cancel gracefully", async () => {
-    hoisted.mockServerGetClientCapabilities.mockReturnValue({ elicitation: { form: true } });
+    hoisted.mockServerGetClientCapabilities.mockReturnValue({
+      elicitation: { form: true },
+    });
     hoisted.mockServerElicitInput.mockResolvedValue({ action: "cancel" });
 
     const { call } = await startServerAndGetHandlers();
@@ -562,7 +570,9 @@ describe("MCP server handlers", () => {
 
   it("login tool falls back to static guidance when elicitInput throws", async () => {
     // Simulate elicitation capability present but elicitInput throws at runtime
-    hoisted.mockServerGetClientCapabilities.mockReturnValue({ elicitation: { form: true } });
+    hoisted.mockServerGetClientCapabilities.mockReturnValue({
+      elicitation: { form: true },
+    });
     hoisted.mockServerElicitInput.mockRejectedValue(
       new Error("Elicitation not supported at runtime"),
     );
