@@ -25,11 +25,9 @@ export async function validateFile(filePath: string): Promise<void> {
   try {
     stats = await fs.stat(filePath);
   } catch {
-    throw new ValidationError(
-      `File not found: ${filePath}`,
-      "FILE_NOT_FOUND",
-      { filePath }
-    );
+    throw new ValidationError(`File not found: ${filePath}`, "FILE_NOT_FOUND", {
+      filePath,
+    });
   }
 
   // Check format
@@ -38,7 +36,7 @@ export async function validateFile(filePath: string): Promise<void> {
     throw new ValidationError(
       `Unsupported file format: ${ext || "(no extension)"}. Supported: ${Array.from(SUPPORTED_FORMATS).join(", ")}`,
       "UNSUPPORTED_FORMAT",
-      { filePath, format: ext, supported: Array.from(SUPPORTED_FORMATS) }
+      { filePath, format: ext, supported: Array.from(SUPPORTED_FORMATS) },
     );
   }
 
@@ -47,7 +45,7 @@ export async function validateFile(filePath: string): Promise<void> {
     throw new ValidationError(
       `File too large: ${stats.size} bytes exceeds 10MB limit`,
       "FILE_TOO_LARGE",
-      { filePath, size: stats.size, maxSize: MAX_FILE_SIZE }
+      { filePath, size: stats.size, maxSize: MAX_FILE_SIZE },
     );
   }
 }

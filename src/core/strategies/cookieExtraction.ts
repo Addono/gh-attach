@@ -54,19 +54,15 @@ async function extractCookiesFromBrowsers(): Promise<string | null> {
  * @internal
  */
 async function extractChromeCookies(): Promise<string | null> {
-  try {
-    // Chrome stores cookies in a SQLite database
-    // This is a placeholder - actual implementation would require:
-    // 1. Finding Chrome user data directory (OS-specific)
-    // 2. Copying the encrypted cookie database
-    // 3. Decrypting cookies (platform-specific)
-    // 4. Extracting GitHub cookies
+  // Chrome stores cookies in a SQLite database
+  // This is a placeholder - actual implementation would require:
+  // 1. Finding Chrome user data directory (OS-specific)
+  // 2. Copying the encrypted cookie database
+  // 3. Decrypting cookies (platform-specific)
+  // 4. Extracting GitHub cookies
 
-    // For now, return null (not implemented)
-    return null;
-  } catch {
-    return null;
-  }
+  // For now, return null (not implemented)
+  return null;
 }
 
 /**
@@ -75,16 +71,12 @@ async function extractChromeCookies(): Promise<string | null> {
  * @internal
  */
 async function extractFirefoxCookies(): Promise<string | null> {
-  try {
-    // Firefox stores cookies in SQLite database
-    // This is a placeholder - actual implementation would require:
-    // 1. Finding Firefox profile directory (OS-specific)
-    // 2. Accessing the cookie database
-    // 3. Extracting GitHub cookies
+  // Firefox stores cookies in SQLite database
+  // This is a placeholder - actual implementation would require:
+  // 1. Finding Firefox profile directory (OS-specific)
+  // 2. Accessing the cookie database
+  // 3. Extracting GitHub cookies
 
-    // For now, return null (not implemented)
-    return null;
-  } catch {
-    return null;
-  }
+  // For now, return null (not implemented)
+  return null;
 }

@@ -3,7 +3,11 @@ import { existsSync, writeFileSync } from "fs";
 import { execSync } from "child_process";
 import { tmpdir } from "os";
 import { join } from "path";
-import { CopilotClient, approveAll, type SessionEvent } from "@github/copilot-sdk";
+import {
+  CopilotClient,
+  approveAll,
+  type SessionEvent,
+} from "@github/copilot-sdk";
 
 // --- Types ---
 
@@ -106,7 +110,9 @@ function selectModel(
       );
       if (premiumCandidates.length > 0) {
         const chosen =
-          premiumCandidates[Math.floor(Math.random() * premiumCandidates.length)]!;
+          premiumCandidates[
+            Math.floor(Math.random() * premiumCandidates.length)
+          ]!;
         log(
           `Stall detected (Δ${best - worst} < ${config.stallThreshold} over ${config.stallWindow} evals) → escalating to premium: ${chosen}`,
         );
@@ -196,10 +202,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences):
   });
 
   try {
-    const response = await session.sendAndWait(
-      { prompt: evalPrompt },
-      120_000,
-    );
+    const response = await session.sendAndWait({ prompt: evalPrompt }, 120_000);
 
     // Extract JSON from assistant message content
     const text = response?.data?.content ?? "";
@@ -246,9 +249,7 @@ function generateModelComparison(evaluations: Evaluation[]): string {
   }
 
   const rows = Object.entries(modelScores).map(([model, scores]) => {
-    const avg = Math.round(
-      scores.reduce((a, b) => a + b, 0) / scores.length,
-    );
+    const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
     return `| ${model} | ${scores.length} | ${avg}/100 |`;
   });
 

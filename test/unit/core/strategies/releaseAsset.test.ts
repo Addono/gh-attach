@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createReleaseAssetStrategy } from "../../../../src/core/strategies/releaseAsset.js";
-import { AuthenticationError, UploadError } from "../../../../src/core/types.js";
+import {
+  AuthenticationError,
+  UploadError,
+} from "../../../../src/core/types.js";
 import type { UploadTarget } from "../../../../src/core/types.js";
 
 // Create a shared mock object that will be reused
@@ -9,7 +12,7 @@ let mockOctokitInstance: any;
 // Mock the Octokit module
 vi.mock("@octokit/rest", () => {
   return {
-    Octokit: vi.fn(function(this: any) {
+    Octokit: vi.fn(function (this: any) {
       if (!mockOctokitInstance) {
         mockOctokitInstance = {
           rest: {
@@ -61,11 +64,15 @@ describe("Release Asset Strategy", () => {
   describe("isAvailable", () => {
     it("returns true when token is valid", async () => {
       const strategy = createReleaseAssetStrategy("valid-token");
-      mockOctokitInstance.rest.users.getAuthenticated.mockResolvedValue({ success: true });
+      mockOctokitInstance.rest.users.getAuthenticated.mockResolvedValue({
+        success: true,
+      });
 
       const available = await strategy.isAvailable();
       expect(available).toBe(true);
-      expect(mockOctokitInstance.rest.users.getAuthenticated).toHaveBeenCalled();
+      expect(
+        mockOctokitInstance.rest.users.getAuthenticated,
+      ).toHaveBeenCalled();
     });
 
     it("returns false when token is empty", async () => {
@@ -78,7 +85,7 @@ describe("Release Asset Strategy", () => {
     it("returns false when authentication fails", async () => {
       const strategy = createReleaseAssetStrategy("invalid-token");
       mockOctokitInstance.rest.users.getAuthenticated.mockRejectedValue(
-        new Error("Invalid token")
+        new Error("Invalid token"),
       );
 
       const available = await strategy.isAvailable();
@@ -117,7 +124,9 @@ describe("Release Asset Strategy", () => {
       expect(result.url).toBe(mockAsset.browser_download_url);
       expect(result.markdown).toContain("![test.png]");
       expect(result.strategy).toBe("release-asset");
-      expect(mockOctokitInstance.rest.repos.getReleaseByTag).toHaveBeenCalledWith({
+      expect(
+        mockOctokitInstance.rest.repos.getReleaseByTag,
+      ).toHaveBeenCalledWith({
         owner: mockTarget.owner,
         repo: mockTarget.repo,
         tag: "_gh-attach-assets",
@@ -155,13 +164,15 @@ describe("Release Asset Strategy", () => {
       const result = await strategy.upload(mockFilePath, mockTarget);
 
       expect(result.url).toBe(mockAsset.browser_download_url);
-      expect(mockOctokitInstance.rest.repos.createRelease).toHaveBeenCalledWith({
-        owner: mockTarget.owner,
-        repo: mockTarget.repo,
-        tag_name: "_gh-attach-assets",
-        name: "Image Assets",
-        draft: true,
-      });
+      expect(mockOctokitInstance.rest.repos.createRelease).toHaveBeenCalledWith(
+        {
+          owner: mockTarget.owner,
+          repo: mockTarget.repo,
+          tag_name: "_gh-attach-assets",
+          name: "Image Assets",
+          draft: true,
+        },
+      );
     });
 
     it("handles filename collision with hash suffix", async () => {
@@ -198,7 +209,8 @@ describe("Release Asset Strategy", () => {
 
       expect(result.url).toBe(newAsset.browser_download_url);
       // Verify that uploadReleaseAsset was called with a modified filename
-      const uploadCall = mockOctokitInstance.rest.repos.uploadReleaseAsset.mock.calls[0][0];
+      const uploadCall =
+        mockOctokitInstance.rest.repos.uploadReleaseAsset.mock.calls[0][0];
       expect(uploadCall.name).toMatch(/test-[a-z0-9]{6}\.png/);
     });
 
@@ -210,11 +222,11 @@ describe("Release Asset Strategy", () => {
       (err404 as any).status = 404;
       mockOctokitInstance.rest.repos.getReleaseByTag.mockRejectedValue(err404);
       mockOctokitInstance.rest.repos.createRelease.mockRejectedValue(
-        new Error("403 Forbidden - insufficient permissions")
+        new Error("403 Forbidden - insufficient permissions"),
       );
 
       await expect(strategy.upload(mockFilePath, mockTarget)).rejects.toThrow(
-        AuthenticationError
+        AuthenticationError,
       );
     });
 
@@ -227,7 +239,7 @@ describe("Release Asset Strategy", () => {
       mockOctokitInstance.rest.repos.getReleaseByTag.mockRejectedValue(err403);
 
       await expect(strategy.upload(mockFilePath, mockTarget)).rejects.toThrow(
-        AuthenticationError
+        AuthenticationError,
       );
     });
 
@@ -246,11 +258,11 @@ describe("Release Asset Strategy", () => {
         data: [],
       });
       mockOctokitInstance.rest.repos.uploadReleaseAsset.mockRejectedValue(
-        new Error("Upload failed")
+        new Error("Upload failed"),
       );
 
       await expect(strategy.upload(mockFilePath, mockTarget)).rejects.toThrow(
-        UploadError
+        UploadError,
       );
     });
 

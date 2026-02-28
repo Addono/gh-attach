@@ -7,7 +7,9 @@
 import { readFileSync } from "fs";
 import { Command } from "commander";
 
-const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
+const pkg = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+);
 
 const program = new Command();
 
@@ -20,7 +22,10 @@ program
   .command("upload")
   .description("Upload an image and get a markdown embed URL")
   .argument("<files...>", "Image file(s) to upload")
-  .requiredOption("--target <ref>", "GitHub issue/PR reference (owner/repo#N, #N, or URL)")
+  .requiredOption(
+    "--target <ref>",
+    "GitHub issue/PR reference (owner/repo#N, #N, or URL)",
+  )
   .option("--strategy <name>", "Upload strategy to use")
   .option("--format <type>", "Output format: markdown, url, json", "markdown")
   .option("--stdin", "Read image from stdin")
@@ -98,4 +103,3 @@ program
   });
 
 program.parse();
-

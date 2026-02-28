@@ -1,3 +1,6 @@
+import { writeFileSync, unlinkSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import { createReleaseAssetStrategy } from "../../core/strategies/releaseAsset.js";
 import { createBrowserSessionStrategy } from "../../core/strategies/browserSession.js";
 import { createCookieExtractionStrategy } from "../../core/strategies/cookieExtraction.js";
@@ -19,6 +22,17 @@ interface UploadOptions {
  * Upload command implementation.
  */
 export async function uploadCommand(files: string[], options: UploadOptions) {
+  // Handle stdin input
+  if (options.stdin) {
+    if (!options.filename) {
+      throw new Error("--filename is required when using --stdin");
+    }
+    const stdinBuffer = await readStdin();
+    const tempFile = join(tmpdir(), options.filename);
+    writeFileSync(tempFile, stdinBuffer);
+    files = [tempFile];
+  }
+
   // Parse target
   let uploadTarget;
   try {
@@ -35,14 +49,14 @@ export async function uploadCommand(files: string[], options: UploadOptions) {
 
   // If a specific strategy is requested, only use that one
   if (options.strategy) {
-    const token = process.env.GITHUB_TOKEN;
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     const cookies = process.env.GH_ATTACH_COOKIES;
 
     switch (options.strategy) {
       case "release-asset":
         if (!token) {
           throw new Error(
-            "release-asset strategy requires GITHUB_TOKEN environment variable",
+            "release-asset strategy requires GITHUB_TOKEN or GH_TOKEN environment variable",
           );
         }
         strategies.push(createReleaseAssetStrategy(token));
@@ -61,7 +75,7 @@ export async function uploadCommand(files: string[], options: UploadOptions) {
       case "repo-branch":
         if (!token) {
           throw new Error(
-            "repo-branch strategy requires GITHUB_TOKEN environment variable",
+            "repo-branch strategy requires GITHUB_TOKEN or GH_TOKEN environment variable",
           );
         }
         strategies.push(createRepoBranchStrategy(token));
@@ -71,7 +85,7 @@ export async function uploadCommand(files: string[], options: UploadOptions) {
     }
   } else {
     // Default strategy order: browser-session, cookie-extraction, release-asset, repo-branch
-    const token = process.env.GITHUB_TOKEN;
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     const cookies = process.env.GH_ATTACH_COOKIES;
 
     if (cookies) {
@@ -86,48 +100,77 @@ export async function uploadCommand(files: string[], options: UploadOptions) {
 
   if (strategies.length === 0) {
     throw new Error(
-      "No authentication available. Set GITHUB_TOKEN or GH_ATTACH_COOKIES",
+      "No authentication available. Set GITHUB_TOKEN (or GH_TOKEN) or GH_ATTACH_COOKIES",
     );
   }
 
   // Process files
   const results = [];
-  for (const file of files) {
-    // Validate file
-    try {
-      await validateFile(file);
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new Error(`File validation failed: ${err.message}`);
+  try {
+    for (const file of files) {
+      // Validate file
+      try {
+        await validateFile(file);
+      } catch (err) {
+        if (err instanceof Error) {
+          throw new Error(`File validation failed: ${err.message}`);
+        }
+        throw err;
       }
-      throw err;
+
+      // Upload file
+      try {
+        const result = await upload(file, uploadTarget, strategies);
+        results.push(result);
+      } catch (err) {
+        if (err instanceof Error) {
+          throw new Error(`Upload failed: ${err.message}`);
+        }
+        throw err;
+      }
     }
 
-    // Upload file
-    try {
-      const result = await upload(file, uploadTarget, strategies);
-      results.push(result);
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new Error(`Upload failed: ${err.message}`);
+    // Output results
+    const format = options.format || "markdown";
+    for (const result of results) {
+      switch (format) {
+        case "url":
+          console.log(result.url);
+          break;
+        case "json":
+          console.log(JSON.stringify(result, null, 2));
+          break;
+        case "markdown":
+        default:
+          console.log(result.markdown);
       }
-      throw err;
+    }
+  } finally {
+    // Clean up temp files from stdin
+    if (options.stdin) {
+      for (const file of files) {
+        try {
+          unlinkSync(file);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
     }
   }
+}
 
-  // Output results
-  const format = options.format || "markdown";
-  for (const result of results) {
-    switch (format) {
-      case "url":
-        console.log(result.url);
-        break;
-      case "json":
-        console.log(JSON.stringify(result, null, 2));
-        break;
-      case "markdown":
-      default:
-        console.log(result.markdown);
-    }
-  }
+/**
+ * Reads image data from stdin.
+ */
+async function readStdin(): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    process.stdin.on("data", (chunk) => {
+      chunks.push(chunk);
+    });
+    process.stdin.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+    process.stdin.on("error", reject);
+  });
 }

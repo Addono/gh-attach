@@ -18,7 +18,10 @@ export function createBrowserSessionStrategy(cookies: string): UploadStrategy {
       return !!cookies;
     },
 
-    async upload(filePath: string, target: UploadTarget): Promise<UploadResult> {
+    async upload(
+      filePath: string,
+      target: UploadTarget,
+    ): Promise<UploadResult> {
       try {
         // Get repository ID from GitHub
         const repoId = await getRepositoryId(target, cookies);
@@ -34,7 +37,12 @@ export function createBrowserSessionStrategy(cookies: string): UploadStrategy {
         await uploadToS3(uploadUrl, formData, filePath);
 
         // Confirm upload
-        const url = await confirmUpload(target, csrfToken, basename(filePath), cookies);
+        const url = await confirmUpload(
+          target,
+          csrfToken,
+          basename(filePath),
+          cookies,
+        );
 
         // Generate markdown
         const markdown = `![${basename(filePath)}](${url})`;
@@ -69,7 +77,10 @@ export function createBrowserSessionStrategy(cookies: string): UploadStrategy {
  *
  * @internal
  */
-async function getRepositoryId(target: UploadTarget, cookies: string): Promise<string> {
+async function getRepositoryId(
+  target: UploadTarget,
+  cookies: string,
+): Promise<string> {
   try {
     const response = await fetch(
       `https://api.github.com/repos/${target.owner}/${target.repo}`,
@@ -190,7 +201,8 @@ async function uploadToS3(
     }
 
     // Add file
-    form.append("file", file as any); // File as Blob
+    // FormData.append accepts File, Blob, or Uint8Array
+    form.append("file", file as unknown as Blob);
 
     const response = await fetch(uploadUrl, {
       method: "POST",

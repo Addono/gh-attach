@@ -29,7 +29,10 @@ export function createReleaseAssetStrategy(token: string): UploadStrategy {
       }
     },
 
-    async upload(filePath: string, target: UploadTarget): Promise<UploadResult> {
+    async upload(
+      filePath: string,
+      target: UploadTarget,
+    ): Promise<UploadResult> {
       try {
         // Find or create the assets release
         const release = await findOrCreateAssetsRelease(octokit, target);
@@ -164,8 +167,12 @@ async function uploadAsset(
       const existing = assets.find((a) => a.name === filename);
       if (existing) {
         // Append a hash suffix to avoid collision
-        const ext = filename.includes(".") ? filename.substring(filename.lastIndexOf(".")) : "";
-        const base = filename.includes(".") ? filename.substring(0, filename.lastIndexOf(".")) : filename;
+        const ext = filename.includes(".")
+          ? filename.substring(filename.lastIndexOf("."))
+          : "";
+        const base = filename.includes(".")
+          ? filename.substring(0, filename.lastIndexOf("."))
+          : filename;
         const hash = Math.random().toString(36).substring(2, 8);
         finalFilename = `${base}-${hash}${ext}`;
       }
@@ -178,7 +185,7 @@ async function uploadAsset(
       repo: target.repo,
       release_id: releaseId,
       name: finalFilename,
-      data: stream as any, // octokit expects any type here
+      data: stream as unknown as string,
     });
 
     return asset.browser_download_url;

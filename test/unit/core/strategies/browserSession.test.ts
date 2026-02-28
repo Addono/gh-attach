@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createBrowserSessionStrategy } from "../../../../src/core/strategies/browserSession.js";
-import { AuthenticationError, UploadError } from "../../../../src/core/types.js";
+import {
+  AuthenticationError,
+  UploadError,
+} from "../../../../src/core/types.js";
 import type { UploadTarget } from "../../../../src/core/types.js";
 
 const mockTarget: UploadTarget = {

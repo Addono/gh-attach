@@ -33,21 +33,33 @@ export class GhAttachError extends Error {
 }
 
 export class AuthenticationError extends GhAttachError {
-  constructor(message: string, code: string, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    code: string,
+    details?: Record<string, unknown>,
+  ) {
     super(message, code, details);
     this.name = "AuthenticationError";
   }
 }
 
 export class UploadError extends GhAttachError {
-  constructor(message: string, code: string, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    code: string,
+    details?: Record<string, unknown>,
+  ) {
     super(message, code, details);
     this.name = "UploadError";
   }
 }
 
 export class ValidationError extends GhAttachError {
-  constructor(message: string, code: string, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    code: string,
+    details?: Record<string, unknown>,
+  ) {
     super(message, code, details);
     this.name = "ValidationError";
   }

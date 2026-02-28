@@ -122,7 +122,7 @@ describe("validateFile", () => {
       expect(err).toBeInstanceOf(ValidationError);
       expect((err as ValidationError).code).toBe("FILE_TOO_LARGE");
       expect((err as ValidationError).details?.size).toBeGreaterThan(
-        10 * 1024 * 1024
+        10 * 1024 * 1024,
       );
     }
   });
@@ -145,7 +145,10 @@ describe("validateFile", () => {
       expect.fail("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(ValidationError);
-      const details = (err as ValidationError).details as Record<string, unknown>;
+      const details = (err as ValidationError).details as Record<
+        string,
+        unknown
+      >;
       expect(Array.isArray(details.supported)).toBe(true);
       expect((details.supported as string[]).includes("png")).toBe(true);
     }

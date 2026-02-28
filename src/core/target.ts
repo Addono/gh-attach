@@ -15,11 +15,11 @@ import type { UploadTarget } from "./types.js";
  */
 export function parseTarget(
   target: string,
-  getGitRemoteImpl: () => [string, string] = getGitRemote
+  getGitRemoteImpl: () => [string, string] = getGitRemote,
 ): UploadTarget {
   // Try URL format: https://github.com/owner/repo/issues/42 or .../pull/42
   const urlMatch = target.match(
-    /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/(issues|pull)\/(\d+)/
+    /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/(issues|pull)\/(\d+)/,
   );
   if (urlMatch) {
     return {
@@ -56,7 +56,7 @@ export function parseTarget(
   throw new ValidationError(
     `Invalid target: ${target}. Expected format: https://github.com/owner/repo/issues/42, owner/repo#42, or #42`,
     "INVALID_TARGET",
-    { target }
+    { target },
   );
 }
 
@@ -73,13 +73,15 @@ function getGitRemote(): [string, string] {
     }).trim();
 
     // Parse git@github.com:owner/repo.git or https://github.com/owner/repo.git
-    const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/);
+    const sshMatch = remoteUrl.match(
+      /git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/,
+    );
     if (sshMatch) {
       return [sshMatch[1]!, sshMatch[2]!];
     }
 
     const httpsMatch = remoteUrl.match(
-      /https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/
+      /https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/,
     );
     if (httpsMatch) {
       return [httpsMatch[1]!, httpsMatch[2]!];
@@ -88,9 +90,9 @@ function getGitRemote(): [string, string] {
     throw new Error("Could not parse git remote URL");
   } catch {
     throw new ValidationError(
-      'Could not infer repository from git remote. Use full target format: owner/repo#42 or https://github.com/owner/repo/issues/42',
+      "Could not infer repository from git remote. Use full target format: owner/repo#42 or https://github.com/owner/repo/issues/42",
       "INVALID_TARGET",
-      { reason: "git_remote_not_found" }
+      { reason: "git_remote_not_found" },
     );
   }
 }

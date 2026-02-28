@@ -14,9 +14,9 @@
 
 3. After implementing, run validation:
    - `npm run typecheck` — fix any type errors
-   - `npm run lint` — fix any lint errors  
+   - `npm run lint` — fix any lint errors
    - `npm test` — fix any test failures
-   If anything fails, fix it before proceeding.
+     If anything fails, fix it before proceeding.
 
 4. When you discover issues or learn something new:
    - Update IMPLEMENTATION_PLAN.md immediately

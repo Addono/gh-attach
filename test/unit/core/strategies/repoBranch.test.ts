@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createRepoBranchStrategy } from "../../../../src/core/strategies/repoBranch.js";
-import { AuthenticationError, UploadError } from "../../../../src/core/types.js";
+import {
+  AuthenticationError,
+  UploadError,
+} from "../../../../src/core/types.js";
 import type { UploadTarget } from "../../../../src/core/types.js";
 
 // Create a shared mock object that will be reused
@@ -9,7 +12,7 @@ let mockOctokitInstance: any;
 // Mock the Octokit module
 vi.mock("@octokit/rest", () => {
   return {
-    Octokit: vi.fn(function(this: any) {
+    Octokit: vi.fn(function (this: any) {
       if (!mockOctokitInstance) {
         mockOctokitInstance = {
           rest: {
@@ -67,7 +70,9 @@ describe("Repository Branch Strategy", () => {
 
       const available = await strategy.isAvailable();
       expect(available).toBe(true);
-      expect(mockOctokitInstance.rest.users.getAuthenticated).toHaveBeenCalled();
+      expect(
+        mockOctokitInstance.rest.users.getAuthenticated,
+      ).toHaveBeenCalled();
     });
 
     it("returns false when token is empty", async () => {

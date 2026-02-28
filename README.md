@@ -41,20 +41,24 @@ gh-attach upload ./img.png --target #42 --format json
 ## Authentication
 
 ### Strategy 1: Browser Session (default)
+
 ```bash
 gh-attach login  # Opens browser, saves session cookies
 ```
 
 ### Strategy 2: Release Assets (official API)
+
 ```bash
 export GITHUB_TOKEN=ghp_...  # or GH_TOKEN
 gh-attach upload ./img.png --target #42 --strategy release-asset
 ```
 
 ### Strategy 3: Cookie Extraction
+
 Automatically extracts GitHub cookies from Chrome/Firefox.
 
 ### Strategy 4: Repository Branch
+
 Commits images to an orphan branch. Works with any token.
 
 ## MCP Server
@@ -108,6 +112,7 @@ The loop rotates models after each evaluation cycle and posts fitness scores to 
 ## Specifications
 
 See [`openspec/specs/`](openspec/specs/) for the full OpenSpec specifications:
+
 - [Core Upload Library](openspec/specs/core/spec.md)
 - [CLI](openspec/specs/cli/spec.md)
 - [MCP Server](openspec/specs/mcp/spec.md)

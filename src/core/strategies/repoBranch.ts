@@ -29,7 +29,10 @@ export function createRepoBranchStrategy(token: string): UploadStrategy {
       }
     },
 
-    async upload(filePath: string, target: UploadTarget): Promise<UploadResult> {
+    async upload(
+      filePath: string,
+      target: UploadTarget,
+    ): Promise<UploadResult> {
       try {
         // Check if branch exists or create it
         const branchSha = await ensureAssetsBranch(octokit, target);

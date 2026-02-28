@@ -9,9 +9,7 @@ describe("parseTarget", () => {
 
   describe("Full URL parsing", () => {
     it("parses GitHub issue URL", () => {
-      const result = parseTarget(
-        "https://github.com/owner/repo/issues/42"
-      );
+      const result = parseTarget("https://github.com/owner/repo/issues/42");
       expect(result).toEqual({
         owner: "owner",
         repo: "repo",
@@ -21,9 +19,7 @@ describe("parseTarget", () => {
     });
 
     it("parses GitHub pull URL", () => {
-      const result = parseTarget(
-        "https://github.com/owner/repo/pull/99"
-      );
+      const result = parseTarget("https://github.com/owner/repo/pull/99");
       expect(result).toEqual({
         owner: "owner",
         repo: "repo",
@@ -34,15 +30,13 @@ describe("parseTarget", () => {
 
     it("handles multiple digits in issue number", () => {
       const result = parseTarget(
-        "https://github.com/my-org/my-repo/issues/12345"
+        "https://github.com/my-org/my-repo/issues/12345",
       );
       expect(result.number).toBe(12345);
     });
 
     it("handles hyphens in owner and repo names", () => {
-      const result = parseTarget(
-        "https://github.com/my-org/my-repo/issues/1"
-      );
+      const result = parseTarget("https://github.com/my-org/my-repo/issues/1");
       expect(result.owner).toBe("my-org");
       expect(result.repo).toBe("my-repo");
     });
@@ -129,31 +123,35 @@ describe("parseTarget", () => {
     it("throws INVALID_TARGET when git remote is not found", () => {
       const mockGetGitRemote = () => {
         throw new ValidationError(
-          'Could not infer repository from git remote.',
+          "Could not infer repository from git remote.",
           "INVALID_TARGET",
-          { reason: "git_remote_not_found" }
+          { reason: "git_remote_not_found" },
         );
       };
-      expect(() => parseTarget("#42", mockGetGitRemote)).toThrow(ValidationError);
+      expect(() => parseTarget("#42", mockGetGitRemote)).toThrow(
+        ValidationError,
+      );
     });
 
     it("throws INVALID_TARGET when git remote is invalid", () => {
       const mockGetGitRemote = () => {
         throw new ValidationError(
-          'Could not infer repository from git remote.',
+          "Could not infer repository from git remote.",
           "INVALID_TARGET",
-          { reason: "git_remote_not_found" }
+          { reason: "git_remote_not_found" },
         );
       };
-      expect(() => parseTarget("#42", mockGetGitRemote)).toThrow(ValidationError);
+      expect(() => parseTarget("#42", mockGetGitRemote)).toThrow(
+        ValidationError,
+      );
     });
 
     it("includes git_remote_not_found in error details", () => {
       const mockGetGitRemote = () => {
         throw new ValidationError(
-          'Could not infer repository from git remote.',
+          "Could not infer repository from git remote.",
           "INVALID_TARGET",
-          { reason: "git_remote_not_found" }
+          { reason: "git_remote_not_found" },
         );
       };
       try {
@@ -163,7 +161,7 @@ describe("parseTarget", () => {
         expect(err).toBeInstanceOf(ValidationError);
         expect((err as ValidationError).code).toBe("INVALID_TARGET");
         expect((err as ValidationError).details?.reason).toBe(
-          "git_remote_not_found"
+          "git_remote_not_found",
         );
       }
     });
@@ -171,15 +169,17 @@ describe("parseTarget", () => {
 
   describe("Invalid input handling", () => {
     it("throws INVALID_TARGET for random strings", () => {
-      expect(() => parseTarget("invalid target format")).toThrow(ValidationError);
       expect(() => parseTarget("invalid target format")).toThrow(
-        "Invalid target"
+        ValidationError,
+      );
+      expect(() => parseTarget("invalid target format")).toThrow(
+        "Invalid target",
       );
     });
 
     it("throws INVALID_TARGET for malformed URLs", () => {
       expect(() => parseTarget("https://example.com/invalid")).toThrow(
-        ValidationError
+        ValidationError,
       );
     });
 
@@ -199,7 +199,9 @@ describe("parseTarget", () => {
 
     it("throws INVALID_TARGET for #pull without number", () => {
       const mockGetGitRemote = () => ["owner", "repo"] as [string, string];
-      expect(() => parseTarget("#pull", mockGetGitRemote)).toThrow(ValidationError);
+      expect(() => parseTarget("#pull", mockGetGitRemote)).toThrow(
+        ValidationError,
+      );
     });
 
     it("throws INVALID_TARGET for malformed shorthand", () => {

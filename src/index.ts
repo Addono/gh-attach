@@ -4,5 +4,9 @@
  * @module gh-attach
  */
 
-export type { UploadStrategy, UploadResult, UploadTarget } from "./core/types.js";
+export type {
+  UploadStrategy,
+  UploadResult,
+  UploadTarget,
+} from "./core/types.js";
 export { upload } from "./core/upload.js";

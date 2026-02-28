@@ -1,14 +1,17 @@
 # Ralph Loop Specification
 
 ## Purpose
+
 Define the autonomous development loop that uses the GitHub Copilot SDK to implement `gh-attach` from OpenSpec specifications. The loop includes model rotation, fitness scoring, and historical tracking via GitHub Issues.
 
 ## Requirements
 
 ### Requirement: Ralph Loop Core
+
 The system SHALL implement a Ralph Loop using the `@github/copilot-sdk` package.
 
 #### Scenario: Loop execution
+
 - GIVEN `PROMPT_plan.md` or `PROMPT_build.md` and the project files
 - WHEN the loop runs
 - THEN each iteration SHALL:
@@ -19,6 +22,7 @@ The system SHALL implement a Ralph Loop using the `@github/copilot-sdk` package.
   5. Log the iteration number and outcome
 
 #### Scenario: Plan mode
+
 - GIVEN `npx tsx ralph-loop.ts plan`
 - WHEN the loop runs
 - THEN it SHALL use `PROMPT_plan.md` as the prompt
@@ -26,6 +30,7 @@ The system SHALL implement a Ralph Loop using the `@github/copilot-sdk` package.
 - AND update `IMPLEMENTATION_PLAN.md`
 
 #### Scenario: Build mode
+
 - GIVEN `npx tsx ralph-loop.ts build`
 - WHEN the loop runs
 - THEN it SHALL use `PROMPT_build.md` as the prompt
@@ -33,32 +38,39 @@ The system SHALL implement a Ralph Loop using the `@github/copilot-sdk` package.
 - AND run tests before committing
 
 ### Requirement: Model Rotation
+
 The system SHALL rotate models after every evaluation cycle.
 
 #### Scenario: Model pool
+
 - GIVEN the available model pool
 - THEN it SHALL include: `gpt-5.1-codex-mini`, `gpt-5.1-codex`, `gpt-4.1`, `claude-sonnet-4`, `claude-haiku-4.5`, `claude-sonnet-4.5`
 - AND the pool SHALL be configurable via `ralph-config.json`
 
 #### Scenario: Random model selection
+
 - GIVEN a new evaluation cycle starts (after every N iterations)
 - WHEN the next model is selected
 - THEN it SHALL be chosen randomly from the pool (excluding the current model)
 - AND the selection SHALL be logged to `ralph-loop.log`
 
 #### Scenario: Model tracking
+
 - GIVEN any iteration
 - THEN the log SHALL record: `{ iteration, model, startTime, endTime, outcome }`
 
 ### Requirement: Fitness Scoring
+
 The system SHALL evaluate the implementation against OpenSpec entries after every N iterations.
 
 #### Scenario: Evaluation trigger
+
 - GIVEN the evaluation interval N (default: 5)
 - WHEN iteration count is a multiple of N
 - THEN the system SHALL trigger a fitness evaluation
 
 #### Scenario: Fitness evaluation process
+
 - GIVEN a fitness evaluation is triggered
 - THEN the system SHALL:
   1. Create a new Copilot session with a lightweight model (e.g., `claude-haiku-4.5`)
@@ -72,6 +84,7 @@ The system SHALL evaluate the implementation against OpenSpec entries after ever
   5. Return an aggregate fitness score (weighted average)
 
 #### Scenario: Fitness evaluation prompt
+
 - GIVEN the evaluation session
 - THEN the prompt SHALL include:
   - All spec files concatenated with section headers
@@ -81,9 +94,11 @@ The system SHALL evaluate the implementation against OpenSpec entries after ever
   - A request for structured JSON output: `{ specCompliance, testCoverage, codeQuality, buildHealth, aggregate, notes }`
 
 ### Requirement: GitHub Issue Reporting
+
 The system SHALL post fitness scores to a dedicated GitHub Issue.
 
 #### Scenario: Tracking issue creation
+
 - GIVEN the first fitness evaluation
 - WHEN no tracking issue exists
 - THEN the system SHALL create a GitHub Issue titled `[Ralph Loop] Fitness Tracking`
@@ -91,9 +106,11 @@ The system SHALL post fitness scores to a dedicated GitHub Issue.
 - AND store the issue number in `ralph-state.json`
 
 #### Scenario: Score posting
+
 - GIVEN a completed fitness evaluation
 - WHEN the score is ready
 - THEN the system SHALL post a new comment on the tracking issue with:
+
   ```
   ## Fitness Evaluation — Iteration {n} — {model}
 
@@ -111,6 +128,7 @@ The system SHALL post fitness scores to a dedicated GitHub Issue.
   ```
 
 #### Scenario: Issue description trend
+
 - GIVEN multiple fitness evaluations have been posted
 - WHEN a new evaluation completes
 - THEN the system SHALL update the issue description (body) with:
@@ -119,6 +137,7 @@ The system SHALL post fitness scores to a dedicated GitHub Issue.
   - A model performance comparison (average score per model)
 
 #### Scenario: Trend chart format
+
 - GIVEN historical fitness scores
 - THEN the trend chart SHALL use a text-based sparkline or ASCII bar chart
   ```
@@ -130,9 +149,11 @@ The system SHALL post fitness scores to a dedicated GitHub Issue.
   ```
 
 ### Requirement: State Persistence
+
 The system SHALL persist loop state to disk.
 
 #### Scenario: State file
+
 - GIVEN the ralph loop state
 - THEN it SHALL be persisted to `ralph-state.json` containing:
   - `currentIteration: number`
@@ -141,15 +162,18 @@ The system SHALL persist loop state to disk.
   - `evaluations: Array<{ iteration, model, scores, timestamp }>`
 
 #### Scenario: Resume after crash
+
 - GIVEN `ralph-state.json` exists
 - WHEN the loop restarts
 - THEN it SHALL resume from the last recorded iteration
 - AND use the next model in rotation
 
 ### Requirement: Loop Configuration
+
 The system SHALL support configuration via `ralph-config.json`.
 
 #### Scenario: Configuration options
+
 - GIVEN `ralph-config.json`
 - THEN it SHALL support:
   - `maxIterations: number` (default: 50)
@@ -160,9 +184,11 @@ The system SHALL support configuration via `ralph-config.json`.
   - `timeout: number` (per-iteration timeout in ms, default: 600000)
 
 ### Requirement: PROMPT Files
+
 The system SHALL include well-crafted prompt files.
 
 #### Scenario: PROMPT_plan.md contents
+
 - GIVEN the planning prompt
 - THEN it SHALL instruct the agent to:
   1. Study all specs in `openspec/specs/`
@@ -173,6 +199,7 @@ The system SHALL include well-crafted prompt files.
   6. NOT implement anything
 
 #### Scenario: PROMPT_build.md contents
+
 - GIVEN the building prompt
 - THEN it SHALL instruct the agent to:
   1. Study specs and existing code
@@ -184,9 +211,11 @@ The system SHALL include well-crafted prompt files.
   7. Commit with a descriptive conventional commit message
 
 ### Requirement: AGENTS.md
+
 The system SHALL include a concise AGENTS.md file.
 
 #### Scenario: AGENTS.md contents
+
 - GIVEN the operational guide
 - THEN it SHALL be ≤60 lines
 - AND contain:
@@ -198,9 +227,11 @@ The system SHALL include a concise AGENTS.md file.
   - Key conventions (conventional commits, strict TypeScript)
 
 ### Requirement: Graceful Shutdown
+
 The system SHALL handle interruptions gracefully.
 
 #### Scenario: SIGINT handling
+
 - GIVEN the loop is running
 - WHEN SIGINT (Ctrl+C) is received
 - THEN the system SHALL:
@@ -209,6 +240,7 @@ The system SHALL handle interruptions gracefully.
   3. Exit cleanly
 
 #### Scenario: Iteration timeout
+
 - GIVEN an iteration exceeds the configured timeout
 - WHEN the timeout fires
 - THEN the session SHALL be destroyed
