@@ -33,6 +33,24 @@ describe("configCommand unit tests", () => {
     }
   });
 
+  describe("default action (no arguments)", () => {
+    it("prints 'No configuration set' when config is empty and no action given", async () => {
+      await configCommand();
+      expect(consoleSpy).toHaveBeenCalledWith("No configuration set");
+    });
+
+    it("lists all configuration entries when no action given", async () => {
+      writeFileSync(
+        testConfigPath,
+        JSON.stringify({ key1: "value1", key2: "value2" }),
+      );
+
+      await configCommand();
+      expect(consoleSpy).toHaveBeenCalledWith("key1: value1");
+      expect(consoleSpy).toHaveBeenCalledWith("key2: value2");
+    });
+  });
+
   describe("list action", () => {
     it("prints 'No configuration set' when config is empty", async () => {
       await configCommand("list");

@@ -54,6 +54,27 @@ describe("configCommand integration tests", () => {
     }
   });
 
+  it("should list config when called with no arguments", async () => {
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await configCommand("set", "no-arg-key", "no-arg-value");
+    consoleSpy.mockClear();
+
+    await configCommand();
+
+    expect(consoleSpy).toHaveBeenCalledWith("no-arg-key: no-arg-value");
+    consoleSpy.mockRestore();
+  });
+
+  it("should list empty config when called with no arguments", async () => {
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await configCommand();
+
+    expect(consoleSpy).toHaveBeenCalledWith("No configuration set");
+    consoleSpy.mockRestore();
+  });
+
   it("should list empty config", async () => {
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 

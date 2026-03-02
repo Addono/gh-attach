@@ -140,10 +140,11 @@ export function createProgram(): Command {
   program
     .command("config")
     .description("Manage gh-attach configuration")
-    .argument("<action>", "Action: list, set, get")
+    .argument("[action]", "Action: list, set, get (default: list)")
     .argument("[key]", "Configuration key")
     .argument("[value]", "Configuration value")
     .action(async (action, key, value) => {
+      action ??= "list";
       try {
         const { configCommand } = await import("./commands/config.js");
         await configCommand(action, key, value);

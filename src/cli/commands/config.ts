@@ -50,7 +50,7 @@ function saveConfig(config: Config): void {
  * Config command implementation.
  */
 export async function configCommand(
-  action: string,
+  action: string = "list",
   key?: string,
   value?: string,
 ) {

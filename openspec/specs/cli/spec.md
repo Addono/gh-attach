@@ -119,6 +119,13 @@ The system SHALL provide a `login` command for interactive authentication.
 
 The system SHALL provide a `config` command for managing settings.
 
+#### Scenario: View config (no arguments)
+
+- GIVEN an existing config
+- WHEN the user runs `gh-attach config` (no action argument)
+- THEN it SHALL print all configuration key-value pairs
+- AND behave identically to `gh-attach config list`
+
 #### Scenario: View config
 
 - GIVEN an existing config
