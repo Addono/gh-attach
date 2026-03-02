@@ -31,20 +31,12 @@ gh extension install Addono/gh-attach
 
 ## Run without installing (npx)
 
-Add the GitHub Packages registry to your project's `.npmrc`:
-
-```
-@addono:registry=https://npm.pkg.github.com
-```
-
-Then run any command directly:
-
 ```bash
 # Upload an image
-npx @addono/gh-attach upload ./screenshot.png --target owner/repo#42
+npx --registry=https://npm.pkg.github.com @addono/gh-attach upload ./screenshot.png --target owner/repo#42
 
 # Start the MCP server
-npx @addono/gh-attach mcp --transport stdio
+npx --registry=https://npm.pkg.github.com @addono/gh-attach mcp --transport stdio
 ```
 
 ## Quick Start
