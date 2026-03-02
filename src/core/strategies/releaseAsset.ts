@@ -304,6 +304,15 @@ async function uploadAsset(
       },
     });
 
+    if (!asset.browser_download_url) {
+      throw new UploadError(
+        "Upload succeeded but no download URL was returned by GitHub. " +
+          "The target repository may have been renamed — use the full owner/repo#N target format.",
+        "MISSING_DOWNLOAD_URL",
+        { filePath, target },
+      );
+    }
+
     return asset.browser_download_url;
   } catch (err: unknown) {
     const status = getHttpStatus(err);

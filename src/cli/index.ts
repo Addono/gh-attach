@@ -5,6 +5,13 @@
  * CLI can be imported and tested without triggering `program.parse()`.
  */
 
+// Suppress ExperimentalWarning for the Fetch API (emitted on Node < 21).
+process.removeAllListeners("warning");
+process.on("warning", (warning) => {
+  if (warning.name === "ExperimentalWarning") return;
+  process.stderr.write(`${warning.stack ?? warning.message}\n`);
+});
+
 import { readFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
