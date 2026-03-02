@@ -28,6 +28,9 @@ export default defineConfig([
     banner: {
       js: "#!/usr/bin/env node",
     },
+    define: {
+      "process.env.__PKG_VERSION__": JSON.stringify(pkg.version),
+    },
   },
   // CJS bundle for pkg binary packaging (pkg doesn't support ESM)
   {
