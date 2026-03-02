@@ -1,0 +1,15 @@
+node_modules
+dist
+coverage
+bin
+*.log
+.git
+.github
+test
+demo.svg
+ralph-*.json
+ralph-*.log
+ralph-*.ts
+PROMPT_*.md
+IMPLEMENTATION_PLAN.md
+AGENTS.md

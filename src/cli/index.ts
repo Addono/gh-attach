@@ -47,6 +47,10 @@ export function getExitCode(err: unknown): number {
  * Works in both source (`src/cli/`) and dist (`dist/`) layouts.
  */
 export function resolveVersion(): string {
+  // In pkg binary builds, version is injected at build time
+  if (process.env.__PKG_VERSION__) {
+    return process.env.__PKG_VERSION__;
+  }
   const dir = dirname(fileURLToPath(import.meta.url));
   const pkgPath = resolve(
     dir,

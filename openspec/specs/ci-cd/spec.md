@@ -164,6 +164,51 @@ The system SHALL keep dependencies up to date.
 - AND it SHALL check for npm dependency updates weekly
 - AND check for GitHub Actions updates weekly
 
+### Requirement: Docker Container Distribution
+
+The system SHALL publish Docker container images to GitHub Container Registry (GHCR).
+
+#### Scenario: Docker image build on release
+
+- GIVEN a new version is released via semantic-release
+- WHEN the release workflow completes
+- THEN it SHALL build a Docker image from the repository Dockerfile
+- AND push it to `ghcr.io/addono/gh-attach`
+
+#### Scenario: Docker image tagging
+
+- GIVEN a release version (e.g., `1.3.0`)
+- WHEN the Docker image is pushed
+- THEN it SHALL be tagged with:
+  - The exact version (e.g., `1.3.0`)
+  - The major.minor version (e.g., `1.3`)
+  - The major version (e.g., `1`)
+  - `latest`
+
+#### Scenario: Docker image contents
+
+- GIVEN the built Docker image
+- THEN it SHALL use a multi-stage build with a minimal Node.js runtime base
+- AND include the compiled `dist/` output and production dependencies only
+- AND set the default entrypoint to the CLI (`gh-attach`)
+- AND expose port 3000 for HTTP MCP server usage
+
+#### Scenario: Docker CLI usage
+
+- GIVEN the Docker image
+- WHEN a user runs `docker run ghcr.io/addono/gh-attach upload ./img.png --target owner/repo#42`
+- THEN it SHALL behave identically to the native CLI
+- AND accept `GITHUB_TOKEN` via environment variable (`-e GITHUB_TOKEN=...`)
+- AND accept files via volume mount (`-v $(pwd):/workspace`)
+
+#### Scenario: Docker MCP server usage
+
+- GIVEN the Docker image
+- WHEN a user runs `docker run -i ghcr.io/addono/gh-attach mcp --transport stdio`
+- THEN it SHALL start the MCP server in stdio mode
+- AND when a user runs `docker run -p 3000:3000 ghcr.io/addono/gh-attach mcp --transport http`
+- THEN it SHALL start the MCP HTTP server on port 3000
+
 ### Requirement: Branch Protection
 
 The system SHALL document recommended branch protection rules.

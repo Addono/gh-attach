@@ -79,13 +79,13 @@ The system SHALL support uploading images as GitHub release assets via the offic
 - GIVEN a valid GitHub API token with `contents:write` permission
 - AND no existing image-assets release in the target repository
 - WHEN `upload(file, target)` is called
-- THEN the system SHALL create a draft release tagged `_gh-attach-assets`
+- THEN the system SHALL create a prerelease (non-draft) tagged `_gh-attach-assets`
 - AND upload the image as a release asset
 - AND return the asset download URL
 
 #### Scenario: Subsequent upload to existing release
 
-- GIVEN an existing `_gh-attach-assets` draft release
+- GIVEN an existing `_gh-attach-assets` prerelease
 - WHEN `upload(file, target)` is called
 - THEN the system SHALL reuse the existing release
 - AND upload the image as an additional asset

@@ -216,3 +216,25 @@ The system SHALL support configuration via environment variables.
 
 - GIVEN `GH_ATTACH_STRATEGY` environment variable
 - THEN it SHALL override the default strategy selection
+
+### Requirement: Docker CLI Usage
+
+The system SHALL be usable as a CLI tool via Docker container.
+
+#### Scenario: Docker upload with token
+
+- GIVEN the Docker image `ghcr.io/addono/gh-attach`
+- WHEN a user runs:
+  ```
+  docker run -e GITHUB_TOKEN=ghp_xxx -v $(pwd):/workspace ghcr.io/addono/gh-attach upload /workspace/screenshot.png --target owner/repo#42
+  ```
+- THEN it SHALL upload the image and print the markdown embed to stdout
+
+#### Scenario: Docker upload with stdin
+
+- GIVEN the Docker image
+- WHEN a user runs:
+  ```
+  cat screenshot.png | docker run -i -e GITHUB_TOKEN=ghp_xxx ghcr.io/addono/gh-attach upload --target owner/repo#42 --stdin --filename screenshot.png
+  ```
+- THEN it SHALL read from stdin and upload the image

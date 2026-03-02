@@ -1,4 +1,9 @@
+import { readFileSync } from "fs";
 import { defineConfig } from "tsup";
+
+const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
+  version: string;
+};
 
 export default defineConfig([
   {
@@ -22,6 +27,23 @@ export default defineConfig([
     target: "node20",
     banner: {
       js: "#!/usr/bin/env node",
+    },
+  },
+  // CJS bundle for pkg binary packaging (pkg doesn't support ESM)
+  {
+    entry: {
+      "cli-pkg": "src/cli/index.ts",
+    },
+    format: ["cjs"],
+    dts: false,
+    sourcemap: false,
+    target: "node18",
+    noExternal: [/^(?!playwright$)/],
+    banner: {
+      js: "#!/usr/bin/env node",
+    },
+    define: {
+      "process.env.__PKG_VERSION__": JSON.stringify(pkg.version),
     },
   },
 ]);

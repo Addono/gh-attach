@@ -120,3 +120,41 @@ The system SHALL support forwarding authentication from the MCP host.
 - GIVEN a saved browser session exists
 - WHEN the MCP server processes an upload request
 - THEN it SHALL automatically use the session for browser-based strategies
+
+### Requirement: Docker MCP Server
+
+The system SHALL be usable as an MCP server via Docker container.
+
+#### Scenario: Docker stdio MCP server
+
+- GIVEN the Docker image `ghcr.io/addono/gh-attach`
+- WHEN a user runs:
+  ```
+  docker run -i -e GITHUB_TOKEN=ghp_xxx ghcr.io/addono/gh-attach mcp --transport stdio
+  ```
+- THEN it SHALL start the MCP server communicating via JSON-RPC 2.0 over stdin/stdout
+
+#### Scenario: Docker HTTP MCP server
+
+- GIVEN the Docker image
+- WHEN a user runs:
+  ```
+  docker run -p 3000:3000 -e GITHUB_TOKEN=ghp_xxx ghcr.io/addono/gh-attach mcp --transport http --port 3000
+  ```
+- THEN it SHALL start the HTTP MCP server listening on port 3000
+- AND the `/health` endpoint SHALL be accessible from the host
+
+#### Scenario: MCP client configuration
+
+- GIVEN an MCP client configuration (e.g., Claude Desktop, VS Code)
+- THEN the Docker MCP server SHALL be configurable as:
+  ```json
+  {
+    "mcpServers": {
+      "gh-attach": {
+        "command": "docker",
+        "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "ghcr.io/addono/gh-attach", "mcp", "--transport", "stdio"]
+      }
+    }
+  }
+  ```
