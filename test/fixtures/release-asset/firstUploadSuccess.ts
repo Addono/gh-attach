@@ -24,7 +24,12 @@ export const releaseAssetFirstUploadSuccess = {
       url: "https://api.github.com/repos/testowner/testrepo/releases",
       response: {
         status: 201,
-        json: { id: 456, tag_name: "_gh-attach-assets", draft: true },
+        json: {
+          id: 456,
+          tag_name: "_gh-attach-assets",
+          draft: false,
+          prerelease: true,
+        },
       },
     },
     {

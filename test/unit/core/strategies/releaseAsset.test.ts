@@ -97,7 +97,8 @@ describe("Release Asset Strategy", () => {
       const mockRelease = {
         id: 123,
         tag_name: "_gh-attach-assets",
-        draft: true,
+        draft: false,
+        prerelease: true,
       };
 
       const mockAsset = {
@@ -136,7 +137,8 @@ describe("Release Asset Strategy", () => {
       const mockNewRelease = {
         id: 456,
         tag_name: "_gh-attach-assets",
-        draft: true,
+        draft: false,
+        prerelease: true,
       };
 
       const mockAsset = {
@@ -165,7 +167,8 @@ describe("Release Asset Strategy", () => {
           repo: mockTarget.repo,
           tag_name: "_gh-attach-assets",
           name: "Image Assets",
-          draft: true,
+          draft: false,
+          prerelease: true,
         },
       );
     });

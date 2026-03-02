@@ -142,7 +142,8 @@ async function findOrCreateAssetsRelease(
           repo: target.repo,
           tag_name: ASSETS_TAG,
           name: "Image Assets",
-          draft: true,
+          draft: false,
+          prerelease: true,
         });
         return newRelease;
       } catch (createErr: unknown) {

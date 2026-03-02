@@ -5,18 +5,20 @@ import { writeFileSync, unlinkSync, rmSync } from "fs";
 import { tmpdir } from "os";
 
 // Mock the MCP SDK - these are complex external dependencies
-vi.mock("@modelcontextprotocol/sdk/server/index.js", () => ({
-  Server: vi.fn().mockImplementation(function MockServer() {
-    return {
-      setRequestHandler: vi.fn(),
-      connect: vi.fn().mockResolvedValue(undefined),
-    };
-  }),
-}));
+vi.mock("@modelcontextprotocol/sdk/server/index.js", () => {
+  return {
+    Server: class MockServer {
+      setRequestHandler = vi.fn();
+      connect = vi.fn().mockResolvedValue(undefined);
+    },
+  };
+});
 
-vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
-  StdioServerTransport: vi.fn().mockImplementation(() => ({})),
-}));
+vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => {
+  return {
+    StdioServerTransport: class MockStdioTransport {},
+  };
+});
 
 vi.mock("@modelcontextprotocol/sdk/types.js", () => ({
   CallToolRequestSchema: {},

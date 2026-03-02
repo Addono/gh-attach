@@ -78,18 +78,22 @@ const hoisted = vi.hoisted(() => ({
   mockUpload: vi.fn(),
 }));
 
-vi.mock("@modelcontextprotocol/sdk/server/index.js", () => ({
-  Server: vi.fn().mockImplementation(() => ({
-    setRequestHandler: hoisted.mockServerSetRequestHandler,
-    connect: hoisted.mockServerConnect,
-    getClientCapabilities: hoisted.mockServerGetClientCapabilities,
-    elicitInput: hoisted.mockServerElicitInput,
-  })),
-}));
+vi.mock("@modelcontextprotocol/sdk/server/index.js", () => {
+  return {
+    Server: class MockServer {
+      setRequestHandler = hoisted.mockServerSetRequestHandler;
+      connect = hoisted.mockServerConnect;
+      getClientCapabilities = hoisted.mockServerGetClientCapabilities;
+      elicitInput = hoisted.mockServerElicitInput;
+    },
+  };
+});
 
-vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
-  StdioServerTransport: vi.fn().mockImplementation(() => ({})),
-}));
+vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => {
+  return {
+    StdioServerTransport: class MockStdioTransport {},
+  };
+});
 
 vi.mock("@modelcontextprotocol/sdk/types.js", () => ({
   CallToolRequestSchema: hoisted.callToolSchema,
