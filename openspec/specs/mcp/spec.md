@@ -153,7 +153,17 @@ The system SHALL be usable as an MCP server via Docker container.
     "mcpServers": {
       "gh-attach": {
         "command": "docker",
-        "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "ghcr.io/addono/gh-attach", "mcp", "--transport", "stdio"]
+        "args": [
+          "run",
+          "-i",
+          "--rm",
+          "-e",
+          "GITHUB_TOKEN",
+          "ghcr.io/addono/gh-attach",
+          "mcp",
+          "--transport",
+          "stdio"
+        ]
       }
     }
   }
