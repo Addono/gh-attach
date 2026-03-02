@@ -119,4 +119,3 @@ export async function loginCommand(options: LoginOptions) {
     await browser.close();
   }
 }
-
