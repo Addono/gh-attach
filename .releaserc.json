@@ -23,7 +23,9 @@
           {
             "path": "bin/gh-attach-windows-amd64.exe",
             "label": "Windows x64 binary"
-          }
+          },
+          { "path": "dist/*.js.map", "label": "Source maps" },
+          { "path": "gh-extension", "label": "gh extension manifest" }
         ]
       }
     ],
