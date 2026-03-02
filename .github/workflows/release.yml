@@ -7,6 +7,7 @@ on:
 permissions:
   contents: write
   issues: write
+  packages: write
 
 jobs:
   release:
@@ -20,6 +21,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          registry-url: https://npm.pkg.github.com
       - run: npm ci
       - run: npm run build
       - run: npm test
@@ -28,3 +30,5 @@ jobs:
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,5 @@
 {
-  "name": "gh-attach",
+  "name": "@addono/gh-attach",
   "version": "0.0.0-development",
   "description": "CLI tool and MCP server for attaching images to GitHub issues, PRs, and comments",
   "type": "module",
@@ -67,6 +67,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Addono/gh-attach.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "engines": {
     "node": ">=20"

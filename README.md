@@ -22,8 +22,8 @@ GitHub doesn't provide an official API for attaching images to issues and pull r
 ## Install
 
 ```bash
-# npm (standalone)
-npm install -g gh-attach
+# npm (standalone, from GitHub Packages)
+npm install -g @addono/gh-attach --registry=https://npm.pkg.github.com
 
 # gh extension
 gh extension install Addono/gh-attach
