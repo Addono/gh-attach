@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/Addono/gh-attach/compare/v1.1.0...v1.2.0) (2026-03-02)
+
+
+### Features
+
+* include source maps and gh-extension manifest in releases ([4164a00](https://github.com/Addono/gh-attach/commit/4164a0047e7b7dfc630e284e2061c65fe4c85a85)), closes [#extension](https://github.com/Addono/gh-attach/issues/extension) [#extension](https://github.com/Addono/gh-attach/issues/extension) [#18](https://github.com/Addono/gh-attach/issues/18)
+
 # [1.1.0](https://github.com/Addono/gh-attach/compare/v1.0.6...v1.1.0) (2026-03-02)
 
 
