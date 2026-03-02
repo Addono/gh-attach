@@ -1,3 +1,11 @@
+## [1.5.1](https://github.com/Addono/gh-attach/compare/v1.5.0...v1.5.1) (2026-03-02)
+
+
+### Bug Fixes
+
+* bake version at build time and remove Playwright from login flow ([e6be1d5](https://github.com/Addono/gh-attach/commit/e6be1d58c74664a8c2c4f37ea0d7794561047ec3))
+* replace Playwright browser login with gh auth token ([77f2dee](https://github.com/Addono/gh-attach/commit/77f2dee4406054937164cea2fb16b6ddea90f656))
+
 # [1.5.0](https://github.com/Addono/gh-attach/compare/v1.4.0...v1.5.0) (2026-03-02)
 
 
