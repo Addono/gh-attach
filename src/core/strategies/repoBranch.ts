@@ -103,9 +103,8 @@ async function ensureAssetsBranch(
     // If branch doesn't exist, create it as an orphan
     if (
       err instanceof Error &&
-      err.message.includes("404") &&
       "status" in err &&
-      err.status === 404
+      (err as unknown as { status: number }).status === 404
     ) {
       try {
         // Create an orphan branch by creating an initial commit

@@ -294,7 +294,8 @@ async function uploadAsset(
       repo: target.repo,
       release_id: releaseId,
       name: finalFilename,
-      data: data.toString("base64"),
+      // Cast Buffer to string to satisfy TypeScript; Octokit handles Buffer correctly at runtime
+      data: data as unknown as string,
       headers: {
         "content-type": "application/octet-stream",
         "content-length": data.length,
