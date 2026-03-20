@@ -38,6 +38,11 @@ if [ -f "$DIR/dist/cli.js" ]; then
   exec node "$DIR/dist/cli.js" "$@"
 fi
 
+# Developer fallback: allow running directly from a checkout without a build.
+if [ -d "$DIR/.git" ] && [ -x "$DIR/node_modules/.bin/tsx" ] && [ -f "$DIR/src/cli/index.ts" ]; then
+  exec "$DIR/node_modules/.bin/tsx" "$DIR/src/cli/index.ts" "$@"
+fi
+
 if [ -z "$ASSET" ]; then
   echo "Error: unsupported platform: $OS ($ARCH)" >&2
   exit 1
