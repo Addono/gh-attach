@@ -72,4 +72,84 @@ describe("gh extension entrypoints", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("gh-attach prefers local dist output over a bundled platform binary in git checkouts", async () => {
+    const root = process.cwd();
+    const src = await readFile(join(root, "gh-attach"), "utf8");
+
+    const dir = await mkdtemp(join(tmpdir(), "gh-attach-ext-"));
+    try {
+      const ghAttachPath = join(dir, "gh-attach");
+      await writeFile(ghAttachPath, src, "utf8");
+      await chmod(ghAttachPath, 0o755);
+
+      await mkdir(join(dir, ".git"));
+      await mkdir(join(dir, "dist"), { recursive: true });
+      await writeFile(
+        join(dir, "dist", "cli.js"),
+        'console.log("DIST")\n',
+        "utf8",
+      );
+
+      const binDir = join(dir, "bin");
+      await mkdir(binDir);
+
+      const os = process.platform === "darwin" ? "darwin" : "linux";
+      const arch = process.arch === "arm64" ? "arm64" : "amd64";
+      const mockBin = join(binDir, `gh-attach-${os}-${arch}`);
+      await writeFile(mockBin, "#!/bin/sh\necho MOCK\n", "utf8");
+      await chmod(mockBin, 0o755);
+
+      const { stdout, stderr } = await execFileAsync(ghAttachPath, [
+        "--version",
+      ]);
+
+      expect(stderr).toBe("");
+      expect(stdout).toBe("DIST\n");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("gh-attach falls back to local tsx source execution before a bundled binary", async () => {
+    const root = process.cwd();
+    const src = await readFile(join(root, "gh-attach"), "utf8");
+
+    const dir = await mkdtemp(join(tmpdir(), "gh-attach-ext-"));
+    try {
+      const ghAttachPath = join(dir, "gh-attach");
+      await writeFile(ghAttachPath, src, "utf8");
+      await chmod(ghAttachPath, 0o755);
+
+      await mkdir(join(dir, ".git"));
+      const binDir = join(dir, "bin");
+      await mkdir(binDir);
+      await mkdir(join(dir, "node_modules", ".bin"), { recursive: true });
+      await mkdir(join(dir, "src", "cli"), { recursive: true });
+      await writeFile(join(dir, "src", "cli", "index.ts"), "", "utf8");
+
+      const os = process.platform === "darwin" ? "darwin" : "linux";
+      const arch = process.arch === "arm64" ? "arm64" : "amd64";
+      const mockBin = join(binDir, `gh-attach-${os}-${arch}`);
+      await writeFile(mockBin, "#!/bin/sh\necho MOCK\n", "utf8");
+      await chmod(mockBin, 0o755);
+
+      const tsxPath = join(dir, "node_modules", ".bin", "tsx");
+      await writeFile(
+        tsxPath,
+        '#!/bin/sh\nprintf "TSX:%s|%s\\n" "$1" "$2"\n',
+        "utf8",
+      );
+      await chmod(tsxPath, 0o755);
+
+      const { stdout, stderr } = await execFileAsync(ghAttachPath, [
+        "--version",
+      ]);
+
+      expect(stderr).toBe("");
+      expect(stdout).toContain("/src/cli/index.ts|--version");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });
