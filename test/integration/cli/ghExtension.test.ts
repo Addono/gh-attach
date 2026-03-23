@@ -38,6 +38,8 @@ async function createIsolatedGhEnv(): Promise<NodeJS.ProcessEnv> {
     ...process.env,
     HOME: homeDir,
     GH_CONFIG_DIR: configDir,
+    GH_TOKEN:
+      process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? "gh-test-token",
   };
 }
 

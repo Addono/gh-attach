@@ -29,18 +29,18 @@ esac
 
 BIN_DIR="$DIR/bin"
 
-if [ -n "$ASSET" ] && [ -x "$BIN_DIR/$ASSET" ]; then
-  exec "$BIN_DIR/$ASSET" "$@"
-fi
-
-# Developer fallback: allow running from a built working tree.
+# Prefer the current checkout when installed from a local repository.
 if [ -f "$DIR/dist/cli.js" ]; then
   exec node "$DIR/dist/cli.js" "$@"
 fi
 
-# Developer fallback: allow running directly from a checkout without a build.
+# Allow running directly from a checkout without a build.
 if [ -d "$DIR/.git" ] && [ -x "$DIR/node_modules/.bin/tsx" ] && [ -f "$DIR/src/cli/index.ts" ]; then
   exec "$DIR/node_modules/.bin/tsx" "$DIR/src/cli/index.ts" "$@"
+fi
+
+if [ -n "$ASSET" ] && [ -x "$BIN_DIR/$ASSET" ]; then
+  exec "$BIN_DIR/$ASSET" "$@"
 fi
 
 if [ -z "$ASSET" ]; then
