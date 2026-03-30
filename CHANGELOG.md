@@ -1,3 +1,10 @@
+## [1.5.6](https://github.com/Addono/gh-attach/compare/v1.5.5...v1.5.6) (2026-03-30)
+
+
+### Bug Fixes
+
+* improve MCP upload fallback and setup docs ([#58](https://github.com/Addono/gh-attach/issues/58)) ([58e74b7](https://github.com/Addono/gh-attach/commit/58e74b7d0b1807f688828ed5ff4e48de6c57cfdd))
+
 ## [1.5.5](https://github.com/Addono/gh-attach/compare/v1.5.4...v1.5.5) (2026-03-30)
 
 
