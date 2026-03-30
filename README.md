@@ -274,23 +274,23 @@ npm run lint        # ESLint
 
 For production repositories, configure the following protections on the `main` branch via **Settings → Branches → Branch protection rules**:
 
-| Setting                                       | Value                                                                  |
-| --------------------------------------------- | ---------------------------------------------------------------------- |
-| **Require a pull request before merging**     | ✅ enabled                                                             |
-| **Require approvals**                         | 1 review                                                               |
-| **Require status checks to pass**             | ✅ enabled                                                             |
-| **Required status checks**                    | `Lint & Format`, `Typecheck`, `Build`, `Test (Node 22, ubuntu-latest)` |
-| **Require branches to be up to date**         | ✅ enabled                                                             |
-| **Require conversation resolution**           | ✅ enabled                                                             |
-| **Require linear history**                    | ✅ enabled                                                             |
-| **Do not allow bypassing the above settings** | ✅ enabled                                                             |
+| Setting                                       | Value                                                                                                                                                                         |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Require a pull request before merging**     | ✅ enabled                                                                                                                                                                    |
+| **Require approvals**                         | 1 review                                                                                                                                                                      |
+| **Require status checks to pass**             | ✅ enabled                                                                                                                                                                    |
+| **Required status checks**                    | `Lint & Format`, `Typecheck`, `Build`, and the `Test (...)` matrix jobs you want to enforce (for example `Test (Node 22, ubuntu-latest)` and `Test (Node 24, ubuntu-latest)`) |
+| **Require branches to be up to date**         | ✅ enabled                                                                                                                                                                    |
+| **Require conversation resolution**           | ✅ enabled                                                                                                                                                                    |
+| **Require linear history**                    | ✅ enabled                                                                                                                                                                    |
+| **Do not allow bypassing the above settings** | ✅ enabled                                                                                                                                                                    |
 
 To configure via the GitHub CLI:
 
 ```bash
 gh api repos/{owner}/{repo}/branches/main/protection \
   --method PUT \
-  --field required_status_checks='{"strict":true,"checks":[{"context":"Lint & Format"},{"context":"Typecheck"},{"context":"Build"},{"context":"Test (Node 22, ubuntu-latest)"}]}' \
+  --field required_status_checks='{"strict":true,"checks":[{"context":"Lint & Format"},{"context":"Typecheck"},{"context":"Build"},{"context":"Test (Node 22, ubuntu-latest)"},{"context":"Test (Node 24, ubuntu-latest)"}]}' \
   --field enforce_admins=true \
   --field required_pull_request_reviews='{"required_approving_review_count":1}' \
   --field restrictions=null
