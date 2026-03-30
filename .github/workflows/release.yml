@@ -74,10 +74,44 @@ jobs:
           name: ${{ matrix.asset_name }}
           path: bin/${{ matrix.asset_name }}
 
+  validate-release-candidate:
+    name: Validate release candidate
+    runs-on: ubuntu-latest
+    needs: [next-version, build-binaries]
+    if: needs.next-version.outputs.version != ''
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v7
+        with:
+          path: bin
+          pattern: gh-attach-*
+          merge-multiple: true
+      - name: Restore binary permissions
+        run: chmod +x bin/gh-attach-linux-amd64 bin/gh-attach-darwin-amd64 bin/gh-attach-darwin-arm64
+      - name: Verify packaged binaries
+        run: |
+          test -f bin/gh-attach-linux-amd64
+          test -f bin/gh-attach-darwin-amd64
+          test -f bin/gh-attach-darwin-arm64
+          test -f bin/gh-attach-windows-amd64.exe
+      - run: npm run build
+        env:
+          GH_ATTACH_BUILD_VERSION: ${{ needs.next-version.outputs.version }}
+      - run: npm test
+        env:
+          GH_ATTACH_BUILD_VERSION: ${{ needs.next-version.outputs.version }}
+
   release:
     name: Semantic Release
     runs-on: ubuntu-latest
-    needs: [next-version, build-binaries]
+    needs: [next-version, build-binaries, validate-release-candidate]
     if: needs.next-version.outputs.version != ''
     steps:
       - uses: actions/checkout@v6
@@ -102,9 +136,6 @@ jobs:
           test -f bin/gh-attach-darwin-amd64
           test -f bin/gh-attach-darwin-arm64
           test -f bin/gh-attach-windows-amd64.exe
-      - run: npm test
-        env:
-          GH_ATTACH_BUILD_VERSION: ${{ needs.next-version.outputs.version }}
       - name: Release
         run: npx semantic-release
         env:
