@@ -1,18 +1,10 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { chmod, cp, mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
-const PACKAGE_JSON = JSON.parse(
-  readFileSync(resolve(ROOT, "package.json"), "utf8"),
-) as {
-  version: string;
-};
-const EXPECTED_VERSION =
-  process.env.GH_ATTACH_BUILD_VERSION ?? PACKAGE_JSON.version;
 const HAS_GH =
   spawnSync("gh", ["--version"], {
     encoding: "utf8",
@@ -27,6 +19,14 @@ function runGh(
   return execFileSync("gh", args, {
     cwd: options.cwd,
     env: options.env,
+    encoding: "utf8",
+  }).trim();
+}
+
+function runEntrypoint(cwd: string, env: NodeJS.ProcessEnv) {
+  return execFileSync(resolve(cwd, "gh-attach"), ["--version"], {
+    cwd,
+    env,
     encoding: "utf8",
   }).trim();
 }
@@ -75,11 +75,12 @@ describe("GitHub CLI extension integration", () => {
   describe.runIf(HAS_GH)("local extension install", () => {
     it("installs the current checkout and exposes gh attach", async () => {
       const env = await createIsolatedGhEnv();
+      const expectedVersion = runEntrypoint(ROOT, env);
 
       runGh(["extension", "install", "."], { cwd: ROOT, env });
 
       expect(runGh(["attach", "--version"], { cwd: ROOT, env })).toBe(
-        EXPECTED_VERSION,
+        expectedVersion,
       );
       expect(runGh(["attach", "--help"], { cwd: ROOT, env })).toContain(
         "upload",
@@ -89,11 +90,12 @@ describe("GitHub CLI extension integration", () => {
     it("installs an unbuilt checkout and runs the current source via local tsx", async () => {
       const env = await createIsolatedGhEnv();
       const repoDir = await createLocalExtensionCheckout();
+      const expectedVersion = runEntrypoint(repoDir, env);
 
       runGh(["extension", "install", "."], { cwd: repoDir, env });
 
       expect(runGh(["attach", "--version"], { cwd: repoDir, env })).toBe(
-        PACKAGE_JSON.version,
+        expectedVersion,
       );
       expect(runGh(["attach", "--help"], { cwd: repoDir, env })).toContain(
         "upload",
