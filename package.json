@@ -78,7 +78,7 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.4.4",
+    "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.4.2",
     "@github/copilot-sdk": "^0.2.0",
     "@semantic-release/changelog": "^6.0.3",
