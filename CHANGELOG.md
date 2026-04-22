@@ -1,3 +1,12 @@
+## [1.5.8](https://github.com/Addono/gh-attach/compare/v1.5.7...v1.5.8) (2026-04-22)
+
+
+### Bug Fixes
+
+* match npm registry URL for OIDC publishing ([5e4edf1](https://github.com/Addono/gh-attach/commit/5e4edf1e20947d18b24f58aabc785af7cf546468))
+* resolve release version without npm auth ([9c364d0](https://github.com/Addono/gh-attach/commit/9c364d0d268996d5bb35f50541963d57f59920b6))
+* use supported toolchain for trusted publishing ([99368f3](https://github.com/Addono/gh-attach/commit/99368f3f26f3b97356fb50099b87f1d8e38b3f9e))
+
 ## [1.5.7](https://github.com/Addono/gh-attach/compare/v1.5.6...v1.5.7) (2026-03-30)
 
 
