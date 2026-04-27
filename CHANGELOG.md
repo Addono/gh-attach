@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/Addono/gh-attach/compare/v1.5.8...v1.6.0) (2026-04-27)
+
+
+### Features
+
+* **auth:** fall back to GitHub CLI token when env vars are unset ([#82](https://github.com/Addono/gh-attach/issues/82)) ([f6d834c](https://github.com/Addono/gh-attach/commit/f6d834cc9be662967ad1e1eda6d898a413bd4872))
+
 ## [1.5.8](https://github.com/Addono/gh-attach/compare/v1.5.7...v1.5.8) (2026-04-22)
 
 
