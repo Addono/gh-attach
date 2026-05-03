@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/Addono/gh-attach/compare/v1.6.2...v1.7.0) (2026-05-03)
+
+
+### Features
+
+* add video file support (mp4, mov, webm) ([#84](https://github.com/Addono/gh-attach/issues/84)) ([f491f1d](https://github.com/Addono/gh-attach/commit/f491f1dcd0c2f6c975324d7d53dea94d80684dc7))
+
 ## [1.6.2](https://github.com/Addono/gh-attach/compare/v1.6.1...v1.6.2) (2026-05-03)
 
 
