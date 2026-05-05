@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { mcpInternals } from "../../../src/mcp/index.js";
+
+const ROOT = resolve(import.meta.dirname, "../../..");
+const EXPECTED_VERSION =
+  process.env.GH_ATTACH_BUILD_VERSION ??
+  JSON.parse(readFileSync(resolve(ROOT, "package.json"), "utf8")).version;
 
 describe("MCP Streamable HTTP transport", () => {
   let baseUrl: URL;
@@ -25,8 +32,7 @@ describe("MCP Streamable HTTP transport", () => {
 
     const body = (await res.json()) as { status: string; version: string };
     expect(body.status).toBe("ok");
-    expect(typeof body.version).toBe("string");
-    expect(body.version.length).toBeGreaterThan(0);
+    expect(body.version).toBe(EXPECTED_VERSION);
   });
 
   it("supports initialize + tools/list + tools/call over Streamable HTTP", async () => {

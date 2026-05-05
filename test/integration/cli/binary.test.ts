@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -77,6 +77,22 @@ describe("ESM Bundle", () => {
     }).trim();
     const cjsVersion = runCjs("--version");
     expect(esmVersion).toBe(cjsVersion);
+  });
+
+  it("should report the active version when starting MCP over stdio", () => {
+    const result = spawnSync(
+      "node",
+      [ESM_PATH, "mcp", "--transport", "stdio"],
+      {
+        encoding: "utf8",
+        cwd: ROOT,
+        timeout: 1500,
+      },
+    );
+
+    expect(result.stderr).toContain(
+      `[gh-attach MCP] Server started (stdio mode, version ${EXPECTED_VERSION})`,
+    );
   });
 });
 

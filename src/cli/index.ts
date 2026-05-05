@@ -12,10 +12,8 @@ process.on("warning", (warning) => {
   process.stderr.write(`${warning.stack ?? warning.message}\n`);
 });
 
-import { readFileSync } from "fs";
-import { dirname, resolve } from "path";
-import { fileURLToPath } from "url";
 import { Command } from "commander";
+import { resolvePackageVersion } from "../core/version.js";
 import {
   AuthenticationError,
   ValidationError,
@@ -49,25 +47,10 @@ export function getExitCode(err: unknown): number {
 }
 
 /**
- * Resolves the package version by reading the nearest `package.json`.
- *
- * Works in both source (`src/cli/`) and dist (`dist/`) layouts.
+ * Resolves the version for the currently running gh-attach CLI.
  */
 export function resolveVersion(): string {
-  // In pkg binary builds, version is injected at build time
-  if (process.env.__PKG_VERSION__) {
-    return process.env.__PKG_VERSION__;
-  }
-  const dir = dirname(fileURLToPath(import.meta.url));
-  const pkgPath = resolve(
-    dir,
-    dir.endsWith("/src/cli") ? "../.." : "..",
-    "package.json",
-  );
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
-    version: string;
-  };
-  return pkg.version;
+  return resolvePackageVersion(import.meta.url);
 }
 
 /**
