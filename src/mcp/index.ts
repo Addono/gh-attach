@@ -5,7 +5,7 @@
  */
 
 import { randomUUID } from "crypto";
-import { writeFileSync, unlinkSync, readFileSync, existsSync } from "fs";
+import { writeFileSync, unlinkSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { createServer } from "http";
@@ -42,21 +42,9 @@ import {
   type UploadStrategy,
   type UploadTarget,
 } from "../core/types.js";
+import { resolvePackageVersion } from "../core/version.js";
 
-// Get package version
-function getPackageVersion(): string {
-  try {
-    const pkgPath = new URL("../../package.json", import.meta.url).pathname;
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
-      version: string;
-    };
-    return pkg.version;
-  } catch {
-    return "0.0.0-development";
-  }
-}
-
-const VERSION = getPackageVersion();
+const VERSION = resolvePackageVersion(import.meta.url);
 const AUTH_GUIDANCE =
   "No authentication available. Set GITHUB_TOKEN (or GH_TOKEN), run 'gh-attach login' to save a session token, provide GH_ATTACH_COOKIES, or authenticate with the GitHub CLI. If multiple gh accounts are signed in, use 'gh auth status' to inspect them and 'gh auth token --user <login>' to verify the right identity.";
 

@@ -145,11 +145,11 @@ Commits attachments to an orphan branch. Works with any token.
 
 Choose the MCP command that matches how you installed `gh-attach`:
 
-| Install method            | MCP command                           |
-| ------------------------- | ------------------------------------- |
-| Standalone npm install    | `gh-attach mcp --transport stdio`     |
-| Standalone release binary | `gh-attach mcp --transport stdio`     |
-| `gh` extension            | `gh attach mcp --transport stdio`     |
+| Install method            | MCP command                                     |
+| ------------------------- | ----------------------------------------------- |
+| Standalone npm install    | `gh-attach mcp --transport stdio`               |
+| Standalone release binary | `gh-attach mcp --transport stdio`               |
+| `gh` extension            | `gh attach mcp --transport stdio`               |
 | `npx`                     | `npx -y gh-attach@latest mcp --transport stdio` |
 
 When the MCP client supports elicitation, `upload_image` can prompt for a GitHub token during the same tool call and continue the upload without requiring a separate `login` step first.
