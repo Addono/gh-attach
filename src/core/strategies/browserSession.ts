@@ -124,6 +124,13 @@ async function getRepositoryId(
     );
 
     if (!response.ok) {
+      // The REST API only accepts token auth — a session cookie is rejected
+      // (404 on private repos). When authenticating by cookie, fall back to
+      // reading the id from the repository's HTML page, which the same cookie
+      // can load.
+      if (credentials.cookies && !credentials.token) {
+        return getRepositoryIdFromPage(target, credentials);
+      }
       throw new AuthenticationError(
         "Cannot access repository. Session may have expired.",
         "SESSION_EXPIRED",
@@ -134,7 +141,7 @@ async function getRepositoryId(
     const data = (await response.json()) as { id: number };
     return String(data.id);
   } catch (err) {
-    if (err instanceof AuthenticationError) {
+    if (err instanceof AuthenticationError || err instanceof UploadError) {
       throw err;
     }
     throw new UploadError(
@@ -143,6 +150,52 @@ async function getRepositoryId(
       { target, originalError: String(err) },
     );
   }
+}
+
+/**
+ * Resolves the repository id from the repository's HTML page.
+ *
+ * The REST API (api.github.com) does not accept session-cookie auth, so a
+ * cookie-based browser session cannot use it to look up private repositories.
+ * The repo page embeds the numeric id in an `octolytics-dimension-repository_id`
+ * meta tag and is reachable with the same cookie used for the upload.
+ *
+ * @internal
+ */
+async function getRepositoryIdFromPage(
+  target: UploadTarget,
+  credentials: BrowserSessionCredentials,
+): Promise<string> {
+  const response = await fetch(
+    `https://github.com/${target.owner}/${target.repo}`,
+    {
+      headers: {
+        ...buildAuthHeaders(credentials),
+        Accept: "text/html",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new AuthenticationError(
+      "Cannot access repository. Session may have expired.",
+      "SESSION_EXPIRED",
+      { target, status: response.status },
+    );
+  }
+
+  const html = await response.text();
+  const repositoryId = html.match(
+    /octolytics-dimension-repository_id"\s+content="(\d+)"/,
+  )?.[1];
+  if (!repositoryId) {
+    throw new UploadError(
+      "Could not determine repository id from the repository page.",
+      "REPO_ID_FETCH_FAILED",
+      { target },
+    );
+  }
+  return repositoryId;
 }
 
 /**

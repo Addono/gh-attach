@@ -58,32 +58,89 @@ describe("Browser Session Strategy", () => {
   });
 
   describe("upload - getRepositoryId", () => {
-    it("throws AuthenticationError on 401 response from repo API", async () => {
+    it("throws AuthenticationError when both repo API and page reject (401)", async () => {
       const strategy = createBrowserSessionStrategy("test-cookie");
       const mockFilePath = "/tmp/test.png";
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-      });
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ ok: false, status: 401 }) // api.github.com
+        .mockResolvedValueOnce({ ok: false, status: 401 }); // HTML page fallback
 
       await expect(strategy.upload(mockFilePath, mockTarget)).rejects.toThrow(
         AuthenticationError,
       );
     });
 
-    it("throws AuthenticationError on 403 response from repo API", async () => {
+    it("throws AuthenticationError when both repo API and page reject (403)", async () => {
       const strategy = createBrowserSessionStrategy("test-cookie");
       const mockFilePath = "/tmp/test.png";
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-      });
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ ok: false, status: 403 })
+        .mockResolvedValueOnce({ ok: false, status: 403 });
 
       await expect(strategy.upload(mockFilePath, mockTarget)).rejects.toThrow(
         AuthenticationError,
       );
+    });
+
+    it("falls back to the repo HTML page for the id when the API rejects a cookie (private repo)", async () => {
+      const strategy = createBrowserSessionStrategy("test-cookie");
+      const mockFilePath = "/tmp/test.png";
+
+      (global.fetch as ReturnType<typeof vi.fn>)
+        // api.github.com rejects the cookie on a private repo
+        .mockResolvedValueOnce({ ok: false, status: 404 })
+        // the HTML page loads with the cookie and embeds the repository id
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          text: async () =>
+            '<meta name="octolytics-dimension-repository_id" content="987654">',
+        })
+        // upload policy
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            upload_url: "https://s3.example.com/upload",
+            form: { key: "value" },
+            token: "csrf-token-123",
+          }),
+        })
+        // S3 upload
+        .mockResolvedValueOnce({ ok: true, status: 200 })
+        // confirm
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            url: "https://github.com/user-attachments/assets/abc",
+          }),
+        });
+
+      const result = await strategy.upload(mockFilePath, mockTarget);
+      expect(result.url).toBe("https://github.com/user-attachments/assets/abc");
+      expect(result.strategy).toBe("browser-session");
+    });
+
+    it("throws UploadError when the repo page lacks a repository id", async () => {
+      const strategy = createBrowserSessionStrategy("test-cookie");
+      const mockFilePath = "/tmp/test.png";
+
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ ok: false, status: 404 })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          text: async () => "<html><body>no marker here</body></html>",
+        });
+
+      const error = await strategy
+        .upload(mockFilePath, mockTarget)
+        .catch((e) => e);
+      expect(error).toBeInstanceOf(UploadError);
+      expect(error.code).toBe("REPO_ID_FETCH_FAILED");
     });
 
     it("throws UploadError when network error occurs during repo fetch", async () => {
