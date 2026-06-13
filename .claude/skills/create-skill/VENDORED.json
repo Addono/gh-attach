@@ -1,0 +1,24 @@
+{
+  "name": "create-skill",
+  "destination": "skills/create-skill",
+  "generated_by": "scripts/sync-vendored-skills.py",
+  "upstream": {
+    "type": "github",
+    "repository": "siviter-xyz/dot-agent",
+    "path": "skills/create-skill",
+    "ref": "33762551d4dfa2e757fa1b43417c7dab528a215f",
+    "track_branch": "main"
+  },
+  "license": {
+    "spdx_id": "MIT",
+    "copyright_owner": "siviter-xyz/dot-agent contributors"
+  },
+  "files": [
+    "SKILL.md",
+    "references/best-practices.md",
+    "references/examples.md",
+    "references/progressive-disclosure.md",
+    "references/skill-structure.md"
+  ],
+  "allow_local_modifications": false
+}
