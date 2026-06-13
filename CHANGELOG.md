@@ -1,3 +1,10 @@
+## [1.7.3](https://github.com/Addono/gh-attach/compare/v1.7.2...v1.7.3) (2026-06-13)
+
+
+### Bug Fixes
+
+* **browser-session:** resolve repo id from HTML page for private repos ([#111](https://github.com/Addono/gh-attach/issues/111)) ([c8d5887](https://github.com/Addono/gh-attach/commit/c8d588793b3e6cb8353ad57430055e88a7c86b5c))
+
 ## [1.7.2](https://github.com/Addono/gh-attach/compare/v1.7.1...v1.7.2) (2026-05-05)
 
 
