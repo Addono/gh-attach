@@ -1,1 +1,5 @@
 CHANGELOG.md
+.agents/
+.claude/
+apm.lock.yaml
+apm.yml
