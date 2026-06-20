@@ -19,7 +19,7 @@ jobs:
     outputs:
       version: ${{ steps.resolve.outputs.version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v6
@@ -58,7 +58,7 @@ jobs:
             asset_name: gh-attach-windows-amd64.exe
             pkg_target: node18-win-x64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -83,7 +83,7 @@ jobs:
     needs: [next-version, build-binaries]
     if: needs.next-version.outputs.version != ''
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v6
@@ -118,7 +118,7 @@ jobs:
     needs: [next-version, build-binaries, validate-release-candidate]
     if: needs.next-version.outputs.version != ''
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v6
