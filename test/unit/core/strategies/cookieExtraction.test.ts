@@ -74,8 +74,7 @@ describe("Cookie Extraction Strategy", () => {
       (
         file: string,
         args:
-          | string[]
-          | ((err: Error | null, result: { stdout: string }) => void),
+          string[] | ((err: Error | null, result: { stdout: string }) => void),
         cb?: (err: Error | null, result: { stdout: string }) => void,
       ) => {
         const callback = typeof args === "function" ? args : cb;
