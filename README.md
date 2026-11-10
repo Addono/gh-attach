@@ -4,6 +4,13 @@
 [![npm version](https://img.shields.io/npm/v/gh-attach)](https://www.npmjs.com/package/gh-attach)
 [![npm downloads](https://img.shields.io/npm/dt/gh-attach)](https://www.npmjs.com/package/gh-attach)
 
+> [!WARNING]
+> **Project Archived & Sunset**
+>
+> GitHub CLI (gh v2.99.0+) now natively supports attaching images and videos via the repeatable `--attach` flag directly on `gh issue create`, `gh issue edit`, `gh issue comment`, `gh pr create`, `gh pr edit`, and `gh pr comment` (see https://gh.io/gh-attach or https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli).
+>
+> As a result, this third-party utility and workaround is deprecated and no longer maintained.
+
 > Upload images and videos to GitHub issues, PRs, and comments — from the CLI or via MCP.
 
 <p align="center">
